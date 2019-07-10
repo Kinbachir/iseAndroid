@@ -247,7 +247,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             webSettings.setDomStorageEnabled(true);
 
             webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et pas dans le navigateur Web.
-            webView.loadUrl("http://new.idashboard.fr/prodapp"); // https://www.google.com/
+            webView.loadUrl("https://www.google.com/"); //http://new.idashboard.fr/prodapp
         }
     }
 
