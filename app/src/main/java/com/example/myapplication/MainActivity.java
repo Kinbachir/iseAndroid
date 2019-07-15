@@ -209,11 +209,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return "";
     }
 
-    /*
     private String getIpWanAddress() {
         return "";
     }
-    */
 
     private String getDeviceName() {
         String manufacturer = Build.MANUFACTURER;
