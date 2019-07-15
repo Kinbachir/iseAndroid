@@ -209,9 +209,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return "";
     }
 
+    /*
     private String getIpWanAddress() {
         return "";
     }
+    */
 
     private String getDeviceName() {
         String manufacturer = Build.MANUFACTURER;
@@ -396,6 +398,39 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    private void insertData(Connection con) {
+        ResultSet rs = null;
+        //int id_android = 0;
+        String query = " insert into tb_app_android_install (ip_mac, nom_machine, ip_lan,date)"+ " values (?, ?, ?, ?)";
+        PreparedStatement preparedStatement = null;
+        try {
+            preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
+            preparedStatement.setString(1, getMacAddress());
+            preparedStatement.setString(2, getDeviceName());
+            preparedStatement.setString(3, getIpLanAddress());
+            preparedStatement.setTimestamp(4, getCurrentDate());
+
+            int rowAffected = preparedStatement.executeUpdate();
+            if(rowAffected == 1) {
+                rs = preparedStatement.getGeneratedKeys();
+                if(rs.next())
+                    id_inserted = rs.getInt(1); //id_android = rs.getInt(1);
+            }
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+        finally {
+            try {
+                if(rs != null)
+                    rs.close();
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
     public class UpdateMySql extends AsyncTask<String, Void, String> {
 
         @Override
@@ -427,6 +462,19 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
+        }
+    }
+
+    private void updateData(Connection con,String loc) {
+        try {
+            String query = "update tb_app_android_install set localisation = ? where ip_mac = ?";
+            PreparedStatement preparedStmt = con.prepareStatement(query);
+            preparedStmt.setString(1, loc);
+            preparedStmt.setString(2, getMacAddress());
+            preparedStmt.executeUpdate();
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
         }
     }
 
@@ -482,52 +530,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             e.printStackTrace();
         }
         return res;
-    }
-
-    private void insertData(Connection con) {
-        ResultSet rs = null;
-        //int id_android = 0;
-        String query = " insert into tb_app_android_install (ip_mac, nom_machine, ip_lan,date)"+ " values (?, ?, ?, ?)";
-        PreparedStatement preparedStatement = null;
-        try {
-            preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
-            preparedStatement.setString(1, getMacAddress());
-            preparedStatement.setString(2, getDeviceName());
-            preparedStatement.setString(3, getIpLanAddress());
-            preparedStatement.setTimestamp(4, getCurrentDate());
-
-            int rowAffected = preparedStatement.executeUpdate();
-            if(rowAffected == 1) {
-                rs = preparedStatement.getGeneratedKeys();
-                if(rs.next())
-                    id_inserted = rs.getInt(1); //id_android = rs.getInt(1);
-            }
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-        finally {
-            try {
-                if(rs != null)
-                    rs.close();
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
-
-    private void updateData(Connection con,String loc) {
-        try {
-            String query = "update tb_app_android_install set localisation = ? where ip_mac = ?";
-            PreparedStatement preparedStmt = con.prepareStatement(query);
-            preparedStmt.setString(1, loc);
-            preparedStmt.setString(2, getMacAddress());
-            preparedStmt.executeUpdate();
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
     }
 
     private void deleteData(Connection con) {
