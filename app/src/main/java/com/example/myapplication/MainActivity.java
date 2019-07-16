@@ -13,15 +13,10 @@ import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.IntentSender;
+import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.URL;
-import java.text.SimpleDateFormat;
+
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -61,9 +56,7 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Date;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
@@ -72,20 +65,26 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private BroadcastReceiver broadcastReceiver;
     private LocationRequest locationRequest;
     private GoogleApiClient googleApiClient;
-    String location_updated;
-    int id_inserted;
+
 
     String driver ="com.mysql.jdbc.Driver";
     String url = "jdbc:mysql://ms1003976-001.dbaas.ovh.net:35365/udashboard_prod1";
     String user = "cp-admin-1";
     String password = "JNHY678nhbg87zsef836sdfkoi34SD";
-    TextView txt1;
+
+    public static final String MyPREFERENCES = "MyPrefs" ;
+    SharedPreferences sharedpreferences;
+    String location_updated;
+    int id_android,id_inserted;
+    //TextView txt1;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        txt1 = findViewById(R.id.textView1);
+
+        //txt1 = findViewById(R.id.textView1);
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         runtimePermissions();
     }
 
@@ -243,8 +242,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
             locationRequest = LocationRequest.create();
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
-            locationRequest.setInterval(30000);//30 * 1000
-            locationRequest.setFastestInterval(5000);//5 * 1000
+            locationRequest.setInterval(30000);
+            locationRequest.setFastestInterval(5000);
         }
     }
 
@@ -262,7 +261,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 switch (status.getStatusCode()) {
                     //GPS actif
                     case LocationSettingsStatusCodes.SUCCESS:
-                        // All location settings are satisfied.
                         break;
                     //GPS inactif
                     case LocationSettingsStatusCodes.RESOLUTION_REQUIRED:
@@ -294,6 +292,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onResume();
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
             enableGps();
+
             if(webView == null) {
                 loadApplication();
             }
@@ -309,7 +308,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Toast.makeText(MainActivity.this, intent.getExtras().get("adresse").toString(), Toast.LENGTH_LONG).show();
                         location_updated = intent.getExtras().get("adresse").toString();
                         new UpdateMySql().execute();
-                        new SelectMySql().execute();
                     }
                 };
             }
@@ -325,22 +323,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private void loadApplication() {
-        webView = (WebView) findViewById(R.id.webView);
+        webView = findViewById(R.id.webView);
         if(isNetworkAvailable() == true) {
             WebSettings webSettings = webView.getSettings();
             webSettings.setJavaScriptEnabled(true);
             webSettings.setDomStorageEnabled(true);
 
-            webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et pas dans le navigateur Web.
-            webView.loadUrl("https://www.google.com/"); //http://new.idashboard.fr/prodapp
+            //Chargez l'URL dans WebView et non pas dans le navigateur web
+            webView.setWebViewClient(new WebViewClient());
+            webView.loadUrl("https://www.google.com/"); // http://new.idashboard.fr/prodapp
         }
     }
 
     @Override
     protected void onPause() {
-        if(webView != null){
+        if(webView != null) {
             webView.onPause();
-            //webView.pauseTimers();
         }
         super.onPause();
     }
@@ -348,10 +346,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        if(broadcastReceiver != null){
+        if(broadcastReceiver != null) {
             unregisterReceiver(broadcastReceiver);
         }
-        Toast.makeText(MainActivity.this, "onDestroy", Toast.LENGTH_LONG).show();
     }
 
     @Override
@@ -377,7 +374,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Class.forName(driver);
                 Connection con = DriverManager.getConnection(url, user, password);
                 if (con == null) {
-                    Log.e("", "Vérifiez la connexion Internet");
+                    Log.e("", "Vérifiez la connexion internet");
                 }
                 else {
                     Log.e("", "Connexion à la BDD avec succès, insertion en cours ...");
@@ -393,39 +390,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
-        }
-    }
-
-    private void insertData(Connection con) {
-        ResultSet rs = null;
-        //int id_android = 0;
-        String query = " insert into tb_app_android_install (ip_mac, nom_machine, ip_lan,date)"+ " values (?, ?, ?, ?)";
-        PreparedStatement preparedStatement = null;
-        try {
-            preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
-            preparedStatement.setString(1, getMacAddress());
-            preparedStatement.setString(2, getDeviceName());
-            preparedStatement.setString(3, getIpLanAddress());
-            preparedStatement.setTimestamp(4, getCurrentDate());
-
-            int rowAffected = preparedStatement.executeUpdate();
-            if(rowAffected == 1) {
-                rs = preparedStatement.getGeneratedKeys();
-                if(rs.next())
-                    id_inserted = rs.getInt(1); //id_android = rs.getInt(1);
-            }
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-        finally {
-            try {
-                if(rs != null)
-                    rs.close();
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
         }
     }
 
@@ -463,20 +427,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void updateData(Connection con,String loc) {
-        try {
-            String query = "update tb_app_android_install set localisation = ? where ip_mac = ?";
-            PreparedStatement preparedStmt = con.prepareStatement(query);
-            preparedStmt.setString(1, loc);
-            preparedStmt.setString(2, getMacAddress());
-            preparedStmt.executeUpdate();
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
-    }
-
     public class SelectMySql extends AsyncTask<String, Void, String> {
+
         String res;
 
         @Override
@@ -507,36 +459,108 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
-            txt1.setText(result);
+            //txt1.setText(result);
         }
     }
 
-    private String selectData(Connection con) {
-        String query = "select * from tb_app_android_install where id_android = " + id_inserted ;
-        String res ="";
+    private void insertData(Connection con) {
+        String query = "insert into tb_app_android_install (ip_mac, nom_machine, ip_lan, date)"+ " values (?, ?, ?, ?)";
+        PreparedStatement preparedStatement = null;
+        ResultSet rs = null;
         try {
-            Statement st = con.createStatement();
-            ResultSet rs = st.executeQuery(query);
-            ResultSetMetaData rsmd = rs.getMetaData();
+            preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
+            preparedStatement.setString(1, getMacAddress());
+            preparedStatement.setString(2, getDeviceName());
+            preparedStatement.setString(3, getIpLanAddress());
+            preparedStatement.setTimestamp(4, getCurrentDate());
 
-            while (rs.next()) {
-                res = rsmd.getColumnName(1) + " : " + rs.getString(1) + "\n"+rsmd.getColumnName(2) + " : " + rs.getString(2)+ "\n"+rsmd.getColumnName(3) + " : " + rs.getString(3)+ "\n"+rsmd.getColumnName(4) + " : " + rs.getString(4)+ "\n"+rsmd.getColumnName(5) + " : " + rs.getString(5)+ "\n"+rsmd.getColumnName(6) + " : " + rs.getString(6)+ "\n"+rsmd.getColumnName(7) + " : " + rs.getString(7)+ "\n"+rsmd.getColumnName(8) + " : " + rs.getString(8);
+            int rowAffected = preparedStatement.executeUpdate();
+
+            if(rowAffected == 1) {
+                rs = preparedStatement.getGeneratedKeys();
+                if(rs.next()) {
+                    id_android = rs.getInt(1);
+                    SharedPreferences.Editor editor = sharedpreferences.edit();
+                    editor.putInt("id_android", id_android);
+                    editor.commit();
+                }
             }
-        }
-        catch (SQLException e)
-        {
-            e.printStackTrace();
-        }
-        return res;
-    }
-
-    private void deleteData(Connection con) {
-        try {
-            Statement st = con.createStatement();
-            st.executeUpdate("delete from tb_app_android_install where ip_mac='"+getMacAddress()+"'");
         }
         catch (SQLException e) {
             e.printStackTrace();
         }
+        finally {
+            try {
+                if(rs != null)
+                    rs.close();
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
     }
+
+    private void updateData(Connection con,String loc) {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        id_inserted = sharedpreferences.getInt("id_android",0);
+        if(id_inserted != 0) {
+            try {
+                String query = "update tb_app_android_install set localisation = ? where id_android = ?";
+                PreparedStatement preparedStmt = con.prepareStatement(query);
+                preparedStmt.setString(1, loc);
+                preparedStmt.setInt(2, id_inserted);
+                preparedStmt.executeUpdate();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            Log.e("", "id_android null");
+        }
+    }
+
+    private String selectData(Connection con) {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        id_inserted = sharedpreferences.getInt("id_android", 0);
+        String res = "";
+        if (id_inserted != 0) {
+            try {
+                String query = "select * from tb_app_android_install where id_android = " + id_inserted;
+                Statement st = con.createStatement();
+                ResultSet rs = st.executeQuery(query);
+                ResultSetMetaData rsmd = rs.getMetaData();
+
+                while (rs.next()) {
+                    res = rsmd.getColumnName(1) + " : " + rs.getString(1) + "\n" + rsmd.getColumnName(2) + " : " + rs.getString(2) + "\n" + rsmd.getColumnName(3) + " : " + rs.getString(3) + "\n" + rsmd.getColumnName(4) + " : " + rs.getString(4) + "\n" + rsmd.getColumnName(5) + " : " + rs.getString(5) + "\n" + rsmd.getColumnName(6) + " : " + rs.getString(6) + "\n" + rsmd.getColumnName(7) + " : " + rs.getString(7) + "\n" + rsmd.getColumnName(8) + " : " + rs.getString(8);
+                }
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            Log.e("", "id_android null");
+        }
+
+        return res;
+    }
+
+    private void deleteData(Connection con) {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        id_inserted = sharedpreferences.getInt("id_android", 0);
+        String res = "";
+        if (id_inserted != 0) {
+            try {
+                String query = "delete from tb_app_android_install where id_android = " + id_inserted;
+                Statement st = con.createStatement();
+                st.executeUpdate(query);
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            Log.e("", "id_android null");
+        }
+    }
+
 }
