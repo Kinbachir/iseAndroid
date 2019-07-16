@@ -16,7 +16,6 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
-
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -27,11 +26,11 @@ import android.os.Bundle;
 
 import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
+import android.os.StrictMode;
 import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -46,8 +45,11 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStates;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 
+import java.io.BufferedReader;
+import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
+import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
@@ -65,7 +67,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private BroadcastReceiver broadcastReceiver;
     private LocationRequest locationRequest;
     private GoogleApiClient googleApiClient;
-
 
     String driver ="com.mysql.jdbc.Driver";
     String url = "jdbc:mysql://ms1003976-001.dbaas.ovh.net:35365/udashboard_prod1";
@@ -88,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         runtimePermissions();
     }
 
-    private boolean runtimePermissions() {
+    private void runtimePermissions() {
         //permissions non accordées
         if(Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             // si on refuse la permission
@@ -109,45 +110,40 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             else {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},100);
             }
-            return true;
         }
-        //permissions accordées
-        return false;
     }
 
     @Override
     public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        switch (requestCode) {
-            case 100: {
-                // permissions accordées
-                if( grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED){
-                    new InsertMySql().execute();
-                    startLocation();
-                }
-                // Permissions non accordées (refuser l'autorisation)
-                else if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION) && ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
-                    runtimePermissions();
-                }
-                // Permissions non accordées (ne pas demander)
-                else {
-                    new AlertDialog.Builder(this)
-                            .setTitle("Permission de location requise")
-                            .setMessage("Vous devez donner cette permission pour accéder à cette application")
-                            .setPositiveButton("Autoriser manuellement", new DialogInterface.OnClickListener() {
-                                @Override
-                                public void onClick(DialogInterface dialogInterface, int i) {
-                                    Intent intent = new Intent();
-                                    intent.setAction(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
-                                    Uri uri = Uri.fromParts("package", getPackageName(), null);
-                                    intent.setData(uri);
-                                    startActivity(intent);
-                                    finish();
-                                }
-                            })
-                            .setCancelable(false)
-                            .create().show();
-                }
+        if (requestCode == 100) {
+            // permissions accordées
+            if( grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED){
+                new InsertMySql().execute();
+                startLocation();
+            }
+            // Permissions non accordées (refuser l'autorisation)
+            else if (ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION) && ActivityCompat.shouldShowRequestPermissionRationale(this, Manifest.permission.ACCESS_COARSE_LOCATION)) {
+                runtimePermissions();
+            }
+            // Permissions non accordées (ne pas demander)
+            else {
+                new AlertDialog.Builder(this)
+                        .setTitle("Permission de location requise")
+                        .setMessage("Vous devez donner cette permission pour accéder à cette application")
+                        .setPositiveButton("Autoriser manuellement", new DialogInterface.OnClickListener() {
+                            @Override
+                            public void onClick(DialogInterface dialogInterface, int i) {
+                                Intent intent = new Intent();
+                                intent.setAction(android.provider.Settings.ACTION_APPLICATION_DETAILS_SETTINGS);
+                                Uri uri = Uri.fromParts("package", getPackageName(), null);
+                                intent.setData(uri);
+                                startActivity(intent);
+                                finish();
+                            }
+                        })
+                        .setCancelable(false)
+                        .create().show();
             }
         }
     }
@@ -185,7 +181,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 return mac.toString();
             }
         }
-        catch (Exception e) { }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
         return "";
     }
 
@@ -204,11 +202,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
         }
-        catch (Exception ignored) { }
+        catch (Exception e) {
+            e.printStackTrace();
+        }
         return "";
     }
 
     private String getIpWanAddress() {
+        StrictMode.ThreadPolicy policy = new StrictMode.ThreadPolicy.Builder().permitAll().build();
+        StrictMode.setThreadPolicy(policy);
+        try {
+            URL url_name = new URL("http://bot.whatismyipaddress.com");
+            BufferedReader sc = new BufferedReader(new InputStreamReader(url_name.openStream()));
+            String ip = sc.readLine();
+            return ip;
+        }
+        catch (Exception e) {
+           e.printStackTrace();
+        }
         return "";
     }
 
@@ -217,7 +228,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         String model = Build.MODEL;
         if (model.startsWith(manufacturer)) {
             return capitalize(model);
-        } else {
+        }
+        else {
             return capitalize(manufacturer) + " " + model;
         }
     }
@@ -229,14 +241,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         char first = s.charAt(0);
         if (Character.isUpperCase(first)) {
             return s;
-        } else {
+        }
+        else {
             return Character.toUpperCase(first) + s.substring(1);
         }
     }
 
     private void enableGps() {
         final LocationManager manager = (LocationManager) MainActivity.this.getSystemService(Context.LOCATION_SERVICE);
-        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        if (manager != null && !manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             googleApiClient = new GoogleApiClient.Builder(this).addApi(LocationServices.API).addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
             googleApiClient.connect();
 
@@ -267,7 +280,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         try {
                             status.startResolutionForResult(MainActivity.this, 1000);
                         }
-                        catch (IntentSender.SendIntentException e) {}
+                        catch (IntentSender.SendIntentException e) {
+                            e.printStackTrace();
+                        }
                         break;
                 }
             }
@@ -324,7 +339,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private void loadApplication() {
         webView = findViewById(R.id.webView);
-        if(isNetworkAvailable() == true) {
+        if(isNetworkAvailable()) {
             WebSettings webSettings = webView.getSettings();
             webSettings.setJavaScriptEnabled(true);
             webSettings.setDomStorageEnabled(true);
@@ -383,7 +398,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
             catch (Exception e) {
-                Log.e("", e.getMessage());
+                Log.e("error ", e.getMessage());
             }
             return "";
         }
@@ -416,7 +431,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
             catch (Exception e) {
-                Log.e("", e.getMessage());
+                Log.e("error ", e.getMessage());
             }
 
             return "";
@@ -452,7 +467,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
             }
             catch (Exception e) {
-                Log.e("", e.getMessage());
+                Log.e("error ", e.getMessage());
             }
             return res;
         }
@@ -464,15 +479,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private void insertData(Connection con) {
-        String query = "insert into tb_app_android_install (ip_mac, nom_machine, ip_lan, date)"+ " values (?, ?, ?, ?)";
-        PreparedStatement preparedStatement = null;
+        String query = "insert into tb_app_android_install (ip_wan, ip_mac, nom_machine, ip_lan, date)"+ " values (?, ?, ?, ?, ?)";
+        PreparedStatement preparedStatement ;
         ResultSet rs = null;
         try {
             preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
-            preparedStatement.setString(1, getMacAddress());
-            preparedStatement.setString(2, getDeviceName());
-            preparedStatement.setString(3, getIpLanAddress());
-            preparedStatement.setTimestamp(4, getCurrentDate());
+            preparedStatement.setString(1, getIpWanAddress());
+            preparedStatement.setString(2, getMacAddress());
+            preparedStatement.setString(3, getDeviceName());
+            preparedStatement.setString(4, getIpLanAddress());
+            preparedStatement.setTimestamp(5, getCurrentDate());
 
             int rowAffected = preparedStatement.executeUpdate();
 
@@ -482,7 +498,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     id_android = rs.getInt(1);
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putInt("id_android", id_android);
-                    editor.commit();
+                    editor.apply(); //commit();
                 }
             }
         }
@@ -548,7 +564,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private void deleteData(Connection con) {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         id_inserted = sharedpreferences.getInt("id_android", 0);
-        String res = "";
+
         if (id_inserted != 0) {
             try {
                 String query = "delete from tb_app_android_install where id_android = " + id_inserted;
