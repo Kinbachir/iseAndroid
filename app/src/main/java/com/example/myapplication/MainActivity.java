@@ -31,6 +31,7 @@ import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -83,10 +84,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-
         //txt1 = findViewById(R.id.textView1);
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         runtimePermissions();
+        //new SelectMySql().execute();
     }
 
     private void runtimePermissions() {
@@ -218,7 +219,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             return ip;
         }
         catch (Exception e) {
-           e.printStackTrace();
+            e.printStackTrace();
         }
         return "";
     }
@@ -346,7 +347,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
             //Chargez l'URL dans WebView et non pas dans le navigateur web
             webView.setWebViewClient(new WebViewClient());
-            webView.loadUrl("https://www.google.com/"); // http://new.idashboard.fr/prodapp
+            webView.loadUrl("https://new.idashboard.fr/prodapp/");
         }
     }
 
@@ -462,7 +463,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
                 else {
                     Log.e("", "Connexion à la BDD avec succès, selection en cours ...");
-                    res = selectData(con);
+                    res = selectUrl(con);
                     con.close();
                 }
             }
@@ -474,6 +475,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
+            Log.e("onpost res",res);
+            Log.e("onpost result",res);
             //txt1.setText(result);
         }
     }
@@ -558,6 +561,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.e("", "id_android null");
         }
 
+        return res;
+    }
+
+    private String selectUrl(Connection con) {
+        String res = "";
+        try {
+            String query = "select url from tb_url where etat = 1";
+            Statement st = con.createStatement();
+            ResultSet rs = st.executeQuery(query);
+
+            while (rs.next()) {
+                res = rs.getString(1);
+                Log.e("res",res);
+            }
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
         return res;
     }
 
