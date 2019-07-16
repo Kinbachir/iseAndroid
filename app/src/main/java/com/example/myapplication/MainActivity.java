@@ -78,6 +78,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     SharedPreferences sharedpreferences;
     String location_updated;
     int id_android,id_inserted;
+    String url_selected;
     //TextView txt1;
 
     @Override
@@ -87,7 +88,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         //txt1 = findViewById(R.id.textView1);
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         runtimePermissions();
-        //new SelectMySql().execute();
+        new SelectMySql().execute();
     }
 
     private void runtimePermissions() {
@@ -339,15 +340,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private void loadApplication() {
-        webView = findViewById(R.id.webView);
-        if(isNetworkAvailable()) {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        url_selected = sharedpreferences.getString("url_app","");
+        Log.e("url selected",url_selected);
+        if(isNetworkAvailable() && url_selected != "") {
+            webView = findViewById(R.id.webView);
             WebSettings webSettings = webView.getSettings();
             webSettings.setJavaScriptEnabled(true);
             webSettings.setDomStorageEnabled(true);
-
-            //Chargez l'URL dans WebView et non pas dans le navigateur web
-            webView.setWebViewClient(new WebViewClient());
-            webView.loadUrl("https://new.idashboard.fr/prodapp/");
+            webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et non pas dans le navigateur web
+            webView.loadUrl(url_selected);
         }
     }
 
@@ -475,9 +477,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
-            Log.e("onpost res",res);
-            Log.e("onpost result",res);
-            //txt1.setText(result);
+            SharedPreferences.Editor editor = sharedpreferences.edit();
+            editor.putString("url_app", result);
+            editor.apply();
         }
     }
 
@@ -538,6 +540,25 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    private String selectUrl(Connection con) {
+
+        String url_app = "";
+        try {
+            String query = "select url from tb_url where etat = 1";
+            Statement st = con.createStatement();
+            ResultSet rs = st.executeQuery(query);
+
+            while (rs.next()) {
+                url_app = rs.getString(1);
+            }
+        }
+        catch (SQLException e) {
+            e.printStackTrace();
+        }
+
+        return url_app;
+    }
+
     private String selectData(Connection con) {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         id_inserted = sharedpreferences.getInt("id_android", 0);
@@ -561,24 +582,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             Log.e("", "id_android null");
         }
 
-        return res;
-    }
-
-    private String selectUrl(Connection con) {
-        String res = "";
-        try {
-            String query = "select url from tb_url where etat = 1";
-            Statement st = con.createStatement();
-            ResultSet rs = st.executeQuery(query);
-
-            while (rs.next()) {
-                res = rs.getString(1);
-                Log.e("res",res);
-            }
-        }
-        catch (SQLException e) {
-            e.printStackTrace();
-        }
         return res;
     }
 
