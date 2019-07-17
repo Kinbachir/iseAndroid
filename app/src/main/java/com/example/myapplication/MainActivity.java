@@ -31,7 +31,6 @@ import android.util.Log;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import com.google.android.gms.common.ConnectionResult;
@@ -55,7 +54,6 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
-import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
@@ -76,22 +74,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     public static final String MyPREFERENCES = "MyPrefs" ;
     SharedPreferences sharedpreferences;
-    String location_updated;
-    int id_android,id_inserted;
+
+    int id_inserted;
     String url_selected;
-    //TextView txt1;
+    String location_updated;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        //txt1 = findViewById(R.id.textView1);
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        runtimePermissions();
         new SelectMySql().execute();
+
+        if(!runtimePermissions()) {
+            startLocation();
+        }
     }
 
-    private void runtimePermissions() {
+    private Boolean runtimePermissions() {
         //permissions non accordées
         if(Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             // si on refuse la permission
@@ -112,7 +112,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             else {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},100);
             }
+            return true;
         }
+        //permissions accordées
+        return false;
     }
 
     @Override
@@ -120,7 +123,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == 100) {
             // permissions accordées
-            if( grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED){
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
                 new InsertMySql().execute();
                 startLocation();
             }
@@ -251,7 +254,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private void enableGps() {
         final LocationManager manager = (LocationManager) MainActivity.this.getSystemService(Context.LOCATION_SERVICE);
-        if (manager != null && !manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             googleApiClient = new GoogleApiClient.Builder(this).addApi(LocationServices.API).addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
             googleApiClient.connect();
 
@@ -272,7 +275,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             @Override
             public void onResult(LocationSettingsResult result) {
                 final Status status = result.getStatus();
-                final LocationSettingsStates state = result.getLocationSettingsStates();
                 switch (status.getStatusCode()) {
                     //GPS actif
                     case LocationSettingsStatusCodes.SUCCESS:
@@ -318,7 +320,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 webView.onResume();
             }
 
-            if(broadcastReceiver == null){
+            if(broadcastReceiver == null) {
                 broadcastReceiver = new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
@@ -328,7 +330,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     }
                 };
             }
-
             registerReceiver(broadcastReceiver,new IntentFilter("location_update"));
         }
     }
@@ -342,7 +343,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         url_selected = sharedpreferences.getString("url_app","");
-        Log.e("url selected",url_selected);
         if(isNetworkAvailable() && url_selected != "") {
             webView = findViewById(R.id.webView);
             WebSettings webSettings = webView.getSettings();
@@ -355,10 +355,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     @Override
     protected void onPause() {
+        super.onPause();
         if(webView != null) {
             webView.onPause();
         }
-        super.onPause();
     }
 
     @Override
@@ -500,10 +500,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             if(rowAffected == 1) {
                 rs = preparedStatement.getGeneratedKeys();
                 if(rs.next()) {
-                    id_android = rs.getInt(1);
+                    int id_android = rs.getInt(1);
                     SharedPreferences.Editor editor = sharedpreferences.edit();
                     editor.putInt("id_android", id_android);
-                    editor.apply(); //commit();
+                    editor.apply();
                 }
             }
         }
@@ -557,50 +557,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         return url_app;
-    }
-
-    private String selectData(Connection con) {
-        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        id_inserted = sharedpreferences.getInt("id_android", 0);
-        String res = "";
-        if (id_inserted != 0) {
-            try {
-                String query = "select * from tb_app_android_install where id_android = " + id_inserted;
-                Statement st = con.createStatement();
-                ResultSet rs = st.executeQuery(query);
-                ResultSetMetaData rsmd = rs.getMetaData();
-
-                while (rs.next()) {
-                    res = rsmd.getColumnName(1) + " : " + rs.getString(1) + "\n" + rsmd.getColumnName(2) + " : " + rs.getString(2) + "\n" + rsmd.getColumnName(3) + " : " + rs.getString(3) + "\n" + rsmd.getColumnName(4) + " : " + rs.getString(4) + "\n" + rsmd.getColumnName(5) + " : " + rs.getString(5) + "\n" + rsmd.getColumnName(6) + " : " + rs.getString(6) + "\n" + rsmd.getColumnName(7) + " : " + rs.getString(7) + "\n" + rsmd.getColumnName(8) + " : " + rs.getString(8);
-                }
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.e("", "id_android null");
-        }
-
-        return res;
-    }
-
-    private void deleteData(Connection con) {
-        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        id_inserted = sharedpreferences.getInt("id_android", 0);
-
-        if (id_inserted != 0) {
-            try {
-                String query = "delete from tb_app_android_install where id_android = " + id_inserted;
-                Statement st = con.createStatement();
-                st.executeUpdate(query);
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.e("", "id_android null");
-        }
     }
 
 }
