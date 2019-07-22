@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.app.Activity;
 import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
@@ -68,10 +69,18 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
+    private Activity mActivity;
+
     private WebView webView;
     private BroadcastReceiver broadcastReceiver;
     private LocationRequest locationRequest;
     private GoogleApiClient googleApiClient;
+
+    private NetworkChangeReceiver receiver;
+    private boolean isConnected = false;
+    LinearLayout linearLayout,linearLayout1,linearLayout2;
+    ImageView imageView;
+    TextView textView1,textView2;
 
     String driver ="com.mysql.jdbc.Driver";
     String url = "jdbc:mysql://ms1003976-001.dbaas.ovh.net:35365/udashboard_prod1";
@@ -84,16 +93,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     String url_selected;
     String location_updated;
-
-    LinearLayout linearLayout,linearLayout1,linearLayout2;
-    ImageView imageView;
-    TextView textView1,textView2;
     //Button button;
 
+    ////
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        mActivity = MainActivity.this;
 
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
 
@@ -275,7 +282,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void enableGps() {
+    protected void enableGps() {
         final LocationManager manager = (LocationManager) MainActivity.this.getSystemService(Context.LOCATION_SERVICE);
         if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             googleApiClient = new GoogleApiClient.Builder(this).addApi(LocationServices.API).addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
@@ -326,32 +333,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     public void onConnectionFailed(@NonNull ConnectionResult connectionResult) {
     }
 
-    //
     private void startLocation() {
-        //if(isNetworkAvailable()){
+        if(isNetworkAvailable()){
             Intent i = new Intent(getApplicationContext(),GPS_Service.class);
             startService(i);
-        //}
-    }
-
-
-    @Override
-    protected void onStart() {
-        super.onStart();
-        if(isNetworkAvailable()) {
-            new SelectMySql().execute();
         }
     }
 
+    ////
     @Override
-    protected void onResume() {
+    protected void onResume()  {
         super.onResume();
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
-            if(!isNetworkAvailable()) {
-                PageConnectionFailed();
-            }
-            else {
+
+            if(isNetworkAvailable()) {
                 enableGps();
+
                 new SelectMySql().execute();
 
                 if (webView == null) {
@@ -372,8 +369,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         }
                     };
                 }
-
                 registerReceiver(broadcastReceiver, new IntentFilter("location_update"));
+                receiver = new NetworkChangeReceiver();
+                registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+            }
+            else {
+                PageConnectionFailed();
+                /*
+                button.setVisibility(View.VISIBLE);
+                button.setOnClickListener(new View.OnClickListener() {
+                    @Override
+                    public void onClick(View view) {
+                        if(isNetworkAvailable()) {
+                            enableGps();
+                            loadApplication();
+                            isConnected = true;
+                        }
+                        else {
+                            Toast.makeText(getApplicationContext(),"Veuillez activer le wifi",Toast.LENGTH_LONG).show();
+                        }
+                    }
+                });
+                */
             }
         }
     }
@@ -381,56 +398,43 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private boolean isNetworkAvailable() {
         ConnectivityManager connectivityManager = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         NetworkInfo activeNetworkInfo = connectivityManager.getActiveNetworkInfo();
-        return activeNetworkInfo != null;
+        return (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting() && activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI);
     }
 
-    //
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         url_selected = sharedpreferences.getString("url_app","");
         Log.e("url ",url_selected);
+
         linearLayout1.setVisibility(LinearLayout.VISIBLE);
         linearLayout2.setVisibility(LinearLayout.GONE);
         webView = findViewById(R.id.webView);
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
         webSettings.setDomStorageEnabled(true);
-        webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et non pas dans le navigateur web
+        webSettings.setAppCacheEnabled(true);
         webView.loadUrl(url_selected);
-        /*
-        //site inactif
-        if(url_selected == "") {
-            linearLayout1.setVisibility(LinearLayout.GONE);
-            linearLayout2.setVisibility(LinearLayout.VISIBLE);
-            imageView.setImageResource(R.drawable.warn3);
-            textView1.setText("Site inactif");
-            textView2.setText("site non disponible pour le moment \n réessayez plus tard");
-        }
-
-        //site actif
-        if(url_selected != "") {
-            linearLayout1.setVisibility(LinearLayout.VISIBLE);
-            linearLayout2.setVisibility(LinearLayout.GONE);
-            webView = findViewById(R.id.webView);
-            WebSettings webSettings = webView.getSettings();
-            webSettings.setJavaScriptEnabled(true);
-            webSettings.setDomStorageEnabled(true);
-            webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et non pas dans le navigateur web
-            webView.loadUrl(url_selected);
-        }
-        */
+        webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et non pas dans le navigateur web
     }
 
     private void PageConnectionFailed() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
-
         imageView.setImageResource(R.drawable.wifi3);
         textView1.setText("Pas de connexion internet");
         textView2.setText("Veuillez vérifier votre connexion internet \n et réessayez");
     }
 
-    private void PageSiteInactive() {
+    public void reload() {
+        Intent intent = getIntent();
+        overridePendingTransition(0, 0);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NO_ANIMATION);
+        onStop();
+        overridePendingTransition(0, 0);
+        startActivity(intent);
+    }
+
+    private void PageSiteInactif() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
         imageView.setImageResource(R.drawable.warn3);
@@ -452,6 +456,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(broadcastReceiver != null) {
             unregisterReceiver(broadcastReceiver);
         }
+        if(receiver != null) {
+            unregisterReceiver(receiver);
+        }
     }
 
     @Override
@@ -460,6 +467,32 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             webView.goBack();
         } else {
             super.onBackPressed();
+        }
+    }
+
+    public class NetworkChangeReceiver extends BroadcastReceiver {
+
+        @Override
+        public void onReceive(final Context context, final Intent intent) {
+            WifiOn();
+        }
+
+        private boolean WifiOn() {
+            ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+            if (connectivity != null) {
+                NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
+                if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting() && activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                    if (!isConnected) {
+                        isConnected = true;
+                        enableGps();
+                        loadApplication();
+                    }
+                    return true;
+                }
+            }
+            PageConnectionFailed();
+            isConnected = false;
+            return false;
         }
     }
 
@@ -533,7 +566,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     public class SelectMySql extends AsyncTask<String, Void, String> {
-
         String res;
 
         @Override
@@ -566,7 +598,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         @Override
         protected void onPostExecute(String result) {
             if(result == "") {
-                PageSiteInactive();
+                PageSiteInactif();
             }
         }
     }

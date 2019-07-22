@@ -59,6 +59,7 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="50dp"
             android:layout_gravity="center"
+            android:text="réessayer"
             android:visibility="invisible"/>
         -->
     </LinearLayout>
