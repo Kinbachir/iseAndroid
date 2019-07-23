@@ -18,6 +18,7 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
+import android.content.res.Configuration;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -69,8 +70,6 @@ import java.util.List;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
-    private Activity mActivity;
-
     private WebView webView;
     private BroadcastReceiver broadcastReceiver;
     private LocationRequest locationRequest;
@@ -93,14 +92,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     String url_selected;
     String location_updated;
-    //Button button;
 
-    ////
+    //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
-        mActivity = MainActivity.this;
 
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
 
@@ -108,13 +105,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         linearLayout1 = findViewById(R.id.linearLayout1);
         linearLayout2 = findViewById(R.id.linearLayout2);
 
-        linearLayout1.setVisibility(LinearLayout.VISIBLE);
-        linearLayout2.setVisibility(LinearLayout.GONE);
+        //linearLayout1.setVisibility(LinearLayout.VISIBLE);
+        //linearLayout2.setVisibility(LinearLayout.GONE);
 
         imageView = findViewById(R.id.imageView);
         textView1 = findViewById(R.id.textView1);
         textView2 = findViewById(R.id.textView2);
-        //button = findViewById(R.id.button);
 
         if(!runtimePermissions()) {
             startLocation();
@@ -154,7 +150,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (requestCode == 100) {
             // permissions accordées
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                //new InsertMySql().execute();
+                new InsertMySql().execute();
                 startLocation();
             }
             // Permissions non accordées (refuser l'autorisation)
@@ -340,58 +336,34 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    ////
+    //
     @Override
-    protected void onResume()  {
+    protected void onResume() {
         super.onResume();
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+            enableGps();
+            new SelectMySql().execute();
 
-            if(isNetworkAvailable()) {
-                enableGps();
-
-                new SelectMySql().execute();
-
-                if (webView == null) {
-                    loadApplication();
-                }
-
-                if (webView != null) {
-                    webView.onResume();
-                }
-
-                if (broadcastReceiver == null) {
-                    broadcastReceiver = new BroadcastReceiver() {
-                        @Override
-                        public void onReceive(Context context, Intent intent) {
-                            location_updated = intent.getExtras().get("adresse").toString();
-                            Log.e("location ",location_updated);
-                            //new UpdateMySql().execute();
-                        }
-                    };
-                }
-                registerReceiver(broadcastReceiver, new IntentFilter("location_update"));
-                receiver = new NetworkChangeReceiver();
-                registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+            if (webView == null) {
+                loadApplication();
             }
             else {
-                PageConnectionFailed();
-                /*
-                button.setVisibility(View.VISIBLE);
-                button.setOnClickListener(new View.OnClickListener() {
-                    @Override
-                    public void onClick(View view) {
-                        if(isNetworkAvailable()) {
-                            enableGps();
-                            loadApplication();
-                            isConnected = true;
-                        }
-                        else {
-                            Toast.makeText(getApplicationContext(),"Veuillez activer le wifi",Toast.LENGTH_LONG).show();
-                        }
-                    }
-                });
-                */
+                webView.onResume();
             }
+
+            if (broadcastReceiver == null) {
+                broadcastReceiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        location_updated = intent.getExtras().get("adresse").toString();
+                        Log.e("location ",location_updated);
+                        new UpdateMySql().execute();
+                    }
+                };
+            }
+            registerReceiver(broadcastReceiver, new IntentFilter("location_update"));
+            receiver = new NetworkChangeReceiver();
+            registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
     }
 
@@ -401,18 +373,38 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting() && activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI);
     }
 
+    //
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        url_selected = sharedpreferences.getString("url_app","");
-        Log.e("url ",url_selected);
+        url_selected = sharedpreferences.getString("url_app", "");
+        Log.e("url ", url_selected);
 
         linearLayout1.setVisibility(LinearLayout.VISIBLE);
         linearLayout2.setVisibility(LinearLayout.GONE);
+
         webView = findViewById(R.id.webView);
         WebSettings webSettings = webView.getSettings();
         webSettings.setJavaScriptEnabled(true);
+        webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
+
+        webSettings.setSupportMultipleWindows(true);
+
+        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
+        String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
+        webSettings.setAppCachePath(appCachePath);
         webSettings.setAppCacheEnabled(true);
+
+        /*
+        webSettings.setDatabaseEnabled(true);
+        webSettings.setUseWideViewPort(true);
+        webSettings.setAllowFileAccess(true);
+        webSettings.setLoadWithOverviewMode(true);
+        */
+
+        webView.requestFocusFromTouch();
+        webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
+        webView.setScrollbarFadingEnabled(true);
         webView.loadUrl(url_selected);
         webView.setWebViewClient(new WebViewClient()); //Chargez l'URL dans WebView et non pas dans le navigateur web
     }
@@ -433,14 +425,17 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         textView2.setText("site non disponible pour le moment \n réessayez plus tard");
     }
 
+    //
     @Override
     protected void onPause() {
         super.onPause();
         if(webView != null) {
             webView.onPause();
+            //webView.pauseTimers();
         }
     }
 
+    //
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -450,13 +445,24 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(receiver != null) {
             unregisterReceiver(receiver);
         }
+        /*
+        if (webView != null) {
+            webView.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
+            webView.clearHistory();
+
+            ((ViewGroup) webView.getParent()).removeView(webView);
+            webView.destroy();
+            webView = null;
+        }
+        */
     }
 
     @Override
     public void onBackPressed() {
         if (webView.canGoBack()) {
             webView.goBack();
-        } else {
+        }
+        else {
             super.onBackPressed();
         }
     }
@@ -521,7 +527,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    //
     public class UpdateMySql extends AsyncTask<String, Void, String> {
+        String res;
 
         @Override
         protected void onPreExecute() {
@@ -537,11 +545,23 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 if (con == null) {
                     Log.e("", "Vérifiez la connexion Internet");
                 }
+
                 else {
+                    Log.e("", "Connexion à la BDD avec succès, selection avant la mise à jour en cours ...");
+                    res = selectData(con);
+                    Log.e("", "selection location : "+ res);
+                    Log.e("", "location updated : "+ location_updated);
+                    if(res != location_updated) {
+                        updateData(con,location_updated);
+                    }
+                    con.close();
+                    Log.e("", "Connexion à la BDD terminée la mise à jour est effectuée");
+                    /*
                     Log.e("", "Connexion à la BDD avec succès, mise à jour en cours ...");
                     updateData(con,location_updated);
                     con.close();
                     Log.e("", "Connexion à la BDD terminée la mise à jour est effectuée");
+                    */
                 }
             }
             catch (Exception e) {
@@ -649,6 +669,34 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         else {
             Log.e("", "id_android null");
         }
+    }
+
+    private String selectData(Connection con) {
+        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
+        id_inserted = sharedpreferences.getInt("id_android", 0);
+        String location_app ="";
+        if (id_inserted != 0) {
+            try {
+                String query = "select localisation from tb_app_android_install where id_android = " + id_inserted;
+                Statement st = con.createStatement();
+                ResultSet rs = st.executeQuery(query);
+
+                while (rs.next()) {
+                    if(rs.getString(1) != null) {
+                        location_app = rs.getString(1);
+                        return location_app;
+                    }
+                }
+            }
+            catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+        else {
+            Log.e("", "id_android null");
+        }
+
+        return location_app;
     }
 
     private String selectUrl(Connection con) {
