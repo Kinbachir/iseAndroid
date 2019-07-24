@@ -81,4 +81,5 @@ public class GPS_Service extends Service {
             locationManager.removeUpdates(listener);
         }
     }
+
 }

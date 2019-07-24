@@ -9,8 +9,6 @@ import androidx.core.content.ContextCompat;
 
 import android.Manifest;
 import android.annotation.SuppressLint;
-import android.app.Activity;
-import android.app.ProgressDialog;
 import android.content.Context;
 import android.content.DialogInterface;
 import android.content.Intent;
@@ -18,7 +16,6 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
-import android.content.res.Configuration;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -32,11 +29,11 @@ import android.content.IntentFilter;
 import android.os.Handler;
 import android.os.StrictMode;
 import android.util.Log;
-import android.view.View;
+import android.webkit.JavascriptInterface;
+import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -72,14 +69,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
     private WebView webView;
     private BroadcastReceiver broadcastReceiver;
+    private BroadcastReceiver broadcastReceiver2;
     private LocationRequest locationRequest;
     private GoogleApiClient googleApiClient;
 
-    private NetworkChangeReceiver receiver;
+    private BroadcastReceiver receiver;
     private boolean isConnected = false;
+
     LinearLayout linearLayout,linearLayout1,linearLayout2;
     ImageView imageView;
-    TextView textView1,textView2;
+    TextView textView,textView0,textView1,textView2;
 
     String driver ="com.mysql.jdbc.Driver";
     String url = "jdbc:mysql://ms1003976-001.dbaas.ovh.net:35365/udashboard_prod1";
@@ -92,21 +91,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     String url_selected;
     String location_updated;
+    String email_user = "";
 
-    //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        textView = findViewById(R.id.textView);
+        textView0 = findViewById(R.id.textView0);
 
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
 
         linearLayout = findViewById(R.id.linearLayout);
         linearLayout1 = findViewById(R.id.linearLayout1);
         linearLayout2 = findViewById(R.id.linearLayout2);
-
-        //linearLayout1.setVisibility(LinearLayout.VISIBLE);
-        //linearLayout2.setVisibility(LinearLayout.GONE);
 
         imageView = findViewById(R.id.imageView);
         textView1 = findViewById(R.id.textView1);
@@ -115,6 +114,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(!runtimePermissions()) {
             startLocation();
         }
+
+        getEmail();
     }
 
     private Boolean runtimePermissions() {
@@ -150,7 +151,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (requestCode == 100) {
             // permissions accordées
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED && grantResults[1] == PackageManager.PERMISSION_GRANTED) {
-                new InsertMySql().execute();
+                //new InsertMySql().execute();
                 startLocation();
             }
             // Permissions non accordées (refuser l'autorisation)
@@ -351,18 +352,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 webView.onResume();
             }
 
+            //getEmail();
+
             if (broadcastReceiver == null) {
                 broadcastReceiver = new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         location_updated = intent.getExtras().get("adresse").toString();
-                        Log.e("location ",location_updated);
-                        new UpdateMySql().execute();
+                        //getEmail();
+                        //new UpdateMySql().execute();
                     }
                 };
             }
             registerReceiver(broadcastReceiver, new IntentFilter("location_update"));
-            receiver = new NetworkChangeReceiver();
+
+            if (receiver == null) {
+                receiver = new BroadcastReceiver() {
+                    @Override
+                    public void onReceive(Context context, Intent intent) {
+                        RefreshApplication();
+                    }
+                };
+            }
             registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
         }
     }
@@ -387,7 +398,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
-
         webSettings.setSupportMultipleWindows(true);
 
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT);
@@ -423,6 +433,41 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         imageView.setImageResource(R.drawable.warn3);
         textView1.setText("Site inactif");
         textView2.setText("site non disponible pour le moment \n réessayez plus tard");
+    }
+
+    private boolean RefreshApplication() {
+        ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
+        if (connectivity != null) {
+            NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
+            if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting() && activeNetworkInfo.getType() == ConnectivityManager.TYPE_WIFI) {
+                if (!isConnected) {
+                    isConnected = true;
+                    enableGps();
+                    loadApplication();
+                }
+                return true;
+            }
+        }
+        PageConnectionFailed();
+        isConnected = false;
+        return false;
+    }
+
+    private void getEmail() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            //(function(){return window.document.body.outerHTML})();
+            webView.evaluateJavascript("(function(){return window.document.getElementsByClassName('h5 email hint-text mt-8')[0].innerHTML})()",
+                new ValueCallback<String>() {
+                    @Override
+                    public void onReceiveValue(String res) {
+                        if(res != null) {
+                            email_user = res;
+                            textView0.setText(email_user);
+                        }
+                    }
+                }
+            );
+        }
     }
 
     //
@@ -527,7 +572,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    //
     public class UpdateMySql extends AsyncTask<String, Void, String> {
         String res;
 
@@ -547,21 +591,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
 
                 else {
-                    Log.e("", "Connexion à la BDD avec succès, selection avant la mise à jour en cours ...");
+                    Log.e("", "Connexion à la BDD avec succès, selection avant la mise à jour");
                     res = selectData(con);
-                    Log.e("", "selection location : "+ res);
-                    Log.e("", "location updated : "+ location_updated);
+                    Log.e("", "old location : "+ res);
+                    Log.e("", "new location : "+ location_updated);
                     if(res != location_updated) {
+                        Log.e("", "mise à jour en cours ...");
                         updateData(con,location_updated);
                     }
                     con.close();
                     Log.e("", "Connexion à la BDD terminée la mise à jour est effectuée");
-                    /*
-                    Log.e("", "Connexion à la BDD avec succès, mise à jour en cours ...");
-                    updateData(con,location_updated);
-                    con.close();
-                    Log.e("", "Connexion à la BDD terminée la mise à jour est effectuée");
-                    */
                 }
             }
             catch (Exception e) {
