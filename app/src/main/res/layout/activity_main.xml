@@ -9,18 +9,20 @@
     android:orientation="vertical"
     tools:context=".MainActivity">
 
-    <TextView
-        android:id="@+id/textView"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="textView"/>
+    <!--
+        <TextView
+            android:id="@+id/textView"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="textView"/>
 
-    <TextView
-        android:id="@+id/textView0"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="textView0"/>
 
+        <TextView
+            android:id="@+id/textView0"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:text="loc"/>
+        -->
 
     <LinearLayout
         android:id="@+id/linearLayout1"

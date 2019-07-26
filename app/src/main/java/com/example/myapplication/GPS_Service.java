@@ -15,6 +15,7 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.util.List;
 import java.util.Locale;
@@ -29,12 +30,14 @@ public class GPS_Service extends Service {
         return null;
     }
 
+    //
     @Override
     public void onCreate() {
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
                 Intent i = new Intent("location_update");
+
                 List<Address> addresses = null;
                 Geocoder geocoder = new Geocoder(GPS_Service.this, Locale.getDefault());
                 try {
