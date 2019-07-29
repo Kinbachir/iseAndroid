@@ -37,8 +37,8 @@ public class GPS_Service extends Service {
             @Override
             public void onLocationChanged(Location location) {
                 Intent i = new Intent("location_update");
-
-                List<Address> addresses = null;
+                Log.e("location",location.toString());
+                List<Address> addresses ;
                 Geocoder geocoder = new Geocoder(GPS_Service.this, Locale.getDefault());
                 try {
                     addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
