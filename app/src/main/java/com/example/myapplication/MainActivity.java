@@ -16,6 +16,7 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
+import android.graphics.Bitmap;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -88,10 +89,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     SharedPreferences sharedpreferences;
 
     int id_inserted;
-    String url_selected;
-    String location_updated;
-    String email_user;
-    boolean isInserted;
+    String url_selected,location_updated,email_user;
+    Timestamp date_install;
+    Boolean isInserted = false,isExecuted = false;
+    String test_url;
 
     //
     @Override
@@ -109,19 +110,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         textView1 = findViewById(R.id.textView1);
         textView2 = findViewById(R.id.textView2);
 
+        date_install = getCurrentDate();
+
         runtimePermissions();
-        /*
-        if(!runtimePermissions()) {
-            startLocation();
-        }
-        */
 
         if(isNetworkAvailable()) {
             new SelectMySqlUrl().execute();
-            loadApplication();
         }
     }
 
+    //
     private void runtimePermissions() {
         //permissions non accordées
         if(Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
@@ -143,10 +141,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             else {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},100);
             }
-            //return true;
         }
-        //permissions accordées
-        //return false;
     }
 
     @Override
@@ -337,12 +332,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     private void startLocation() {
         if(isNetworkAvailable()){
             Intent i = new Intent(getApplicationContext(),GPS_Service.class);
-            startService(i);
-            /*
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                startForegroundService(i);
-            }
-            */
+            startService(i); //startForegroundService(i);
         }
     }
 
@@ -352,15 +342,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         super.onResume();
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
 
-            new SelectMySqlUrl().execute();
-            createLocationRequest();
-            startLocation();
+            if(test_url == null) {
+                Log.e("url","not selected in onCreate");
+                new SelectMySqlUrl().execute();
+            }
 
             if (webView != null) {
+                createLocationRequest();
+                startLocation();
+                Log.e("webview","resuming");
                 webView.onResume();
                 webView.resumeTimers();
             }
             else {
+                createLocationRequest();
+                startLocation();
+                Log.e("webview","loading");
                 loadApplication();
             }
 
@@ -369,9 +366,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         location_updated = intent.getExtras().get("adresse").toString();
-                        //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
+                        Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
                         new UpdateMySqlLocation().execute();
-                        new UpdateMySqlHistorique().execute();
                     }
                 };
             }
@@ -395,6 +391,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting());
     }
 
+    //
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         url_selected = sharedpreferences.getString("url_app","");
@@ -418,32 +415,25 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         };
         webView.loadUrl(url_selected);
         webView.setWebViewClient(mWebViewClient); //Chargez l'URL dans WebView et non pas dans le navigateur web
-        /*
-            String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
-            webSettings.setAppCachePath(appCachePath);
-            webSettings.setAppCacheEnabled(true);
-            webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
-            webView.setScrollbarFadingEnabled(true);
-
-            ////
-            webSettings.setDatabaseEnabled(true);
-            webSettings.setUseWideViewPort(true);
-            webSettings.setAllowFileAccess(true);
-            webSettings.setLoadWithOverviewMode(true);
-        */
     }
 
+    //
     class MyJavaScriptInterface {
         @JavascriptInterface
         public void onUrlChange(String url) {
             if(url.contains("auth")) {
                 Log.e("auth", url);
                 email_user = null;
+                isExecuted = false;
             }
-            if(!url.contains("auth") && url.contains("idashboard")) {
+            if(!url.contains("auth") && url.contains("idashboard") && !isExecuted) {
                 Log.e("app", url);
-                getEmail();
-                new UpdateMySqlEmail().execute();
+                if(email_user == null) {
+                    Log.e("", "");
+                    getEmail();
+                    new UpdateMySqlEmail().execute();
+                }
+                isExecuted = true;
             }
         }
     }
@@ -480,23 +470,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (connectivity != null) {
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
-                Log.e("","network on");
                 if (!isConnected) {
+                    //createLocationRequest();
+                    //loadApplication();
                     isConnected = true;
-                    /*
-                    if(isInserted == false) {
-                        Log.e("insert","wifi enable");
-                        new InsertMySql().execute();
-                    }
-                    */
-                    createLocationRequest();
-                    loadApplication();
                 }
                 return true;
             }
         }
         //network off
-        Log.e("","network off");
         PageConnectionFailed();
         isConnected = false;
         return false;
@@ -571,7 +553,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 else {
                     Log.e("", "Connexion à la BDD avec succès, selection en cours ...");
                     res = selectUrl(con);
-                    Log.e("", "url = " + res);
+                    test_url = res;
                 }
                 con.close();
             }
@@ -614,7 +596,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
             catch (Exception e) {
                 Log.e("error 2", e.getMessage());
-                isInserted = false;
             }
             return "";
         }
@@ -659,8 +640,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    public class UpdateMySqlHistorique extends AsyncTask<String, Void, String> {
-        String old_historique;
+    //
+    public class UpdateMySqlEmail extends AsyncTask<String, Void, String> {
+        String old_email;
 
         @Override
         protected void onPreExecute() {
@@ -677,23 +659,21 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     Log.e("connexion 4", "Vérifiez la connexion Internet");
                 }
                 else {
-                    old_historique = selectHistorique(con);
-                    if(old_historique == null) {
-                        Log.e("", "Connexion à la BDD avec succès, insertion de l'adresse dans l'historique en cours ...");
-                        updateHistorique(con,null,location_updated);
+                    old_email = selectEmail(con);
+                    if(old_email == null) {
+                        Log.e("", "Connexion à la BDD avec succès, mise à jour de l'email en cours ...");
+                        updateEmail(con,email_user);
                     }
-                    else if(old_historique != null) {
-                        Log.e("", "Connexion à la BDD avec succès, mise à jour de l'historique en cours ...");
-                        updateHistorique(con,old_historique,location_updated);
+                    else if(old_email != null && old_email != email_user) {
+                        Log.e("", "Connexion à la BDD avec succès, nouv user avec mm appareil");
                     }
                     else {
-                        Log.e("", "pas de mise à jour, mm location");
+                        Log.e("", "pas de mise à jour, mm user connecté");
                     }
                 }
                 con.close();
             }
             catch (Exception e) {
-                e.printStackTrace();
                 Log.e("error 4", e.getMessage());
             }
 
@@ -705,6 +685,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    /*
     public class UpdateMySqlEmail extends AsyncTask<String, Void, String> {
         String old_email;
 
@@ -745,6 +726,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         protected void onPostExecute(String result) {
         }
     }
+    */
 
     private String selectUrl(Connection con) {
         String url_app = "";
@@ -767,16 +749,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private void insertData(Connection con) {
-        String query = "insert into tb_app_android_install (ip_wan, ip_mac, nom_machine, ip_lan, date)"+ " values (?, ?, ?, ?, ?)";
+        String query = "insert into tb_app_android_install (ip_wan, ip_mac, nom_machine, ip_lan, date_install) values (?, ?, ?, ?, ?)";
         PreparedStatement preparedStatement ;
-        ResultSet rs = null;
+        ResultSet rs;
         try {
             preparedStatement = con.prepareStatement(query,Statement.RETURN_GENERATED_KEYS);
             preparedStatement.setString(1, getIpWanAddress());
             preparedStatement.setString(2, getMacAddress());
             preparedStatement.setString(3, getDeviceName());
             preparedStatement.setString(4, getIpLanAddress());
-            preparedStatement.setTimestamp(5, getCurrentDate());
+            preparedStatement.setTimestamp(5, date_install);
 
             int rowAffected = preparedStatement.executeUpdate();
 
@@ -789,66 +771,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     editor.apply();
                 }
                 Log.e("", "L'insertion est effectuée");
-                isInserted = true;
             }
         }
         catch (SQLException e) {
             e.printStackTrace();
-        }
-    }
-
-    private String selectHistorique(Connection con) {
-        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        id_inserted = sharedpreferences.getInt("id_android", 0);
-        String historique_selected;
-        if (id_inserted != 0) {
-            try {
-                String query = "select historique from tb_app_android_install where id_android = " + id_inserted;
-                Statement st = con.createStatement();
-                ResultSet rs = st.executeQuery(query);
-
-                while (rs.next()) {
-                    if(rs.getString(1) != null) {
-                        historique_selected = rs.getString(1);
-                        return historique_selected;
-                    }
-                }
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.e("", "id_android null");
-        }
-        return null;
-    }
-
-    private void updateHistorique(Connection con,String old_historique,String new_location) {
-        sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
-        id_inserted = sharedpreferences.getInt("id_android",0);
-        String histo;
-        if(id_inserted != 0) {
-            try {
-                String query = "update tb_app_android_install set historique = ? where id_android = ?";
-                if(old_historique == null) {
-                    histo = new_location;
-                }
-                else {
-                    histo = old_historique +"."+ new_location;
-                }
-                PreparedStatement preparedStmt = con.prepareStatement(query);
-                preparedStmt.setString(1, histo);
-                preparedStmt.setInt(2, id_inserted);
-                preparedStmt.executeUpdate();
-                Log.e("", "La mise à jour de l'historique est effectuée");
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-        else {
-            Log.e("", "id_android null");
         }
     }
 
