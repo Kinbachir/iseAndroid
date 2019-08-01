@@ -20,6 +20,7 @@
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
     </LinearLayout>
+
     <LinearLayout
         android:id="@+id/linearLayout2"
         android:layout_width="match_parent"
@@ -51,17 +52,6 @@
             android:gravity="center"
             android:textSize="15dp"
             android:text="H2"/>
-
-        <!--
-        <Button
-            android:id="@+id/button"
-            android:layout_width="200dp"
-            android:layout_height="wrap_content"
-            android:layout_marginBottom="50dp"
-            android:layout_gravity="center"
-            android:text="réessayer"
-            android:visibility="invisible"/>
-        -->
     </LinearLayout>
 
 </LinearLayout>

@@ -7,7 +7,6 @@ import android.content.pm.PackageManager;
 import android.location.Address;
 import android.location.Geocoder;
 import android.os.Build;
-import android.os.Handler;
 import android.os.IBinder;
 
 import android.content.Context;
@@ -16,9 +15,6 @@ import android.location.LocationListener;
 import android.location.LocationManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.widget.Toast;
-
-import androidx.core.content.ContextCompat;
 
 import java.io.IOException;
 import java.util.List;
@@ -50,12 +46,7 @@ public class GPS_Service extends Service {
                     else if (addresses != null && addresses.size() > 0) {
                         Address address = addresses.get(0);
                         StringBuffer addressDetails = new StringBuffer();
-                        //
-                        for(int k = 0; k <= address.getMaxAddressLineIndex(); k++) {
-                            addressDetails.append(address.getAddressLine(k));
-                        }
-                        //
-                        //addressDetails.append(address.getAddressLine(0));
+                        addressDetails.append(address.getAddressLine(0));
                         i.putExtra("adresse", addressDetails.toString());
                         sendBroadcast(i);
                     }
