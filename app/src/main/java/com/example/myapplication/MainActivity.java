@@ -89,11 +89,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     SharedPreferences sharedpreferences;
 
     int id_inserted;
-    String url_selected,location_updated,email_user;
+    String url_selected,email_user;
     Timestamp date_install;
-    Boolean isExecuted1 = false, isExecuted2 = false, test_email = false;
+    Boolean isExecuted1 = false, isExecuted2 = false;
 
-    ////
+    String location_updated,provider_updated;
+    Long elapsedRealtimeNanos_updated;
+    Double latitude_updated,longitude_updated,altitude_updated;
+    Float accuracy_updated,bearing_updated,speed_updated;
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -111,22 +116,23 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         date_install = getCurrentDate();
 
-        runtimePermissions();
-
-        /*
-        if(!runtimePermissions()) {
-            startLocation();
-        }
-        */
-
         if(isNetworkAvailable()) {
             isExecuted1 = true;
             Log.e("url","selected in onCreate");
             new SelectMySqlUrl().execute();
+            try {
+                Thread.sleep(5000);
+            }
+            catch (InterruptedException e) {
+                e.printStackTrace();
+            }
         }
+
+        runtimePermissions();
+
     }
 
-    private Boolean runtimePermissions() {
+    private void runtimePermissions() {
         //permissions non accordées
         if(Build.VERSION.SDK_INT >= 23 && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED){
             // si on refuse la permission
@@ -147,10 +153,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             else {
                 requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_COARSE_LOCATION},100);
             }
-            return true;
         }
-        //permissions accordées
-        return false;
     }
 
     @Override
@@ -286,15 +289,22 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    ////
     protected void createLocationRequest() {
-        final LocationManager manager = (LocationManager) MainActivity.this.getSystemService(Context.LOCATION_SERVICE);
-        if (!manager.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+        final LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean isGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean isNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        if (!isGPS) { //|| !isNetwork
             Log.e("Location Services","disabled");
-            googleApiClient = new GoogleApiClient.Builder(this).addApi(LocationServices.API).addConnectionCallbacks(this).addOnConnectionFailedListener(this).build();
+            googleApiClient = new GoogleApiClient.Builder(this)
+                    .addConnectionCallbacks(this)
+                    .addOnConnectionFailedListener(this)
+                    .addApi(LocationServices.API)
+                    .build();
             googleApiClient.connect();
 
-            locationRequest = LocationRequest.create();
-            locationRequest.setInterval(5000);
+            locationRequest = new LocationRequest();
+            locationRequest.setInterval(1000);
             locationRequest.setFastestInterval(5000);
             locationRequest.setMaxWaitTime(5000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -344,7 +354,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    //
     @Override
     protected void onResume() {
         super.onResume();
@@ -379,8 +388,28 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                     @Override
                     public void onReceive(Context context, Intent intent) {
                         location_updated = intent.getExtras().get("adresse").toString();
+                        latitude_updated = intent.getDoubleExtra("latitude",0);
+                        longitude_updated = intent.getDoubleExtra("longitude",0);
+
+                        accuracy_updated = intent.getFloatExtra("accuracy",0);
+                        altitude_updated = intent.getDoubleExtra("altitude",0);
+                        bearing_updated = intent.getFloatExtra("bearing",0);
+                        provider_updated = intent.getStringExtra("provider");
+                        speed_updated = intent.getFloatExtra("speed",0);
+                        elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
+
                         //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
                         Log.e("adresse",location_updated);
+                        Log.e("latitude",""+latitude_updated);
+                        Log.e("longitude",""+longitude_updated);
+
+                        Log.e("accuracy",""+accuracy_updated);
+                        Log.e("altitude",""+altitude_updated);
+                        Log.e("bearing",""+bearing_updated);
+                        Log.e("provider",""+provider_updated);
+                        Log.e("speed",""+speed_updated);
+                        Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
+
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
                     }
@@ -406,7 +435,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting());
     }
 
-    //webViewClient
+    //
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         url_selected = sharedpreferences.getString("url_app","");
@@ -423,8 +452,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         /*
         webSettings.setCacheMode(WebSettings.LOAD_DEFAULT); //LOAD_CACHE_ONLY, LOAD_DEFAULT, LOAD_NO_CACHE and LOAD_CACHE_ELSE_NETWORK.
-        //String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
-        //webSettings.setAppCachePath(appCachePath);
+        String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
+        webSettings.setAppCachePath(appCachePath);
         webSettings.setSupportMultipleWindows(true);
         webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
@@ -443,7 +472,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         webView.setWebViewClient(webViewClient); //Chargez l'URL dans WebView et non pas dans le navigateur web
     }
 
-    //test url
+    //
     class MyJavaScriptInterface {
         @JavascriptInterface
         public void onUrlChange(String url) {
@@ -457,7 +486,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 if(email_user == null) {
                     Log.e("email", "getEmail en cours ...");
                     getEmail();
-                    test_email = true;
                     new UpdateMySqlEmail().execute();
                 }
                 isExecuted2 = true;
@@ -519,7 +547,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         textView2.setText("site non disponible pour le moment \n réessayez plus tard");
     }
 
-    //
     @Override
     protected void onPause() {
         super.onPause();
@@ -740,7 +767,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
                 else {
                     Log.e("", "Connexion à la BDD avec succès, insertion de l'historique en cours ...");
-                    insertHistorique(con,location_updated,email_user);
+                    insertHistorique(con,location_updated,latitude_updated,longitude_updated,email_user);
                 }
                 con.close();
             }
@@ -877,9 +904,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     //
-    private void insertHistorique(Connection con,String location,String email) {
+    private void insertHistorique(Connection con,String location,Double latitude,Double longitude,String email) {
         if(email != null) {
-            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_user, nom_machine, localisation, ip_lan, date_install) values (?, ?, ?, ?, ?, ?, ?)";
+            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_user, nom_machine, localisation, ip_lan, date_install, latitude_gps, longitude_gps) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement preparedStatement;
             try {
                 preparedStatement = con.prepareStatement(query);
@@ -890,6 +917,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 preparedStatement.setString(5, location);
                 preparedStatement.setString(6, getIpLanAddress());
                 preparedStatement.setTimestamp(7, date_install);
+                preparedStatement.setDouble(8,latitude);
+                preparedStatement.setDouble(9,longitude);
 
                 int rowAffected = preparedStatement.executeUpdate();
 
@@ -902,7 +931,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
         else {
-            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_machine, localisation, ip_lan, date_install) values (?, ?, ?, ?, ?, ?)";
+            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_machine, localisation, ip_lan, date_install,latitude_gps,longitude_gps) values (?, ?, ?, ?, ?, ?, ?, ?)";
             PreparedStatement preparedStatement;
             try {
                 preparedStatement = con.prepareStatement(query);
@@ -912,6 +941,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 preparedStatement.setString(4, location);
                 preparedStatement.setString(5, getIpLanAddress());
                 preparedStatement.setTimestamp(6, date_install);
+                preparedStatement.setDouble(7,latitude);
+                preparedStatement.setDouble(8,longitude);
 
                 int rowAffected = preparedStatement.executeUpdate();
 
