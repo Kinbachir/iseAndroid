@@ -16,7 +16,6 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
-import android.graphics.Bitmap;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -29,7 +28,6 @@ import android.content.BroadcastReceiver;
 import android.content.IntentFilter;
 import android.os.StrictMode;
 import android.util.Log;
-import android.view.ViewGroup;
 import android.webkit.JavascriptInterface;
 import android.webkit.ValueCallback;
 import android.webkit.WebSettings;
@@ -98,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     Float accuracy_updated,bearing_updated,speed_updated;
     Double latitude_updated,longitude_updated,altitude_updated;
 
-
+    //
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -120,14 +118,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             isExecuted1 = true;
             Log.e("url","selected in onCreate");
             new SelectMySqlUrl().execute();
-            /*
             try {
-                Thread.sleep(3000);
+                Thread.sleep(2000);
             }
             catch (InterruptedException e) {
                 e.printStackTrace();
             }
-            */
         }
 
         runtimePermissions();
@@ -304,7 +300,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             googleApiClient.connect();
 
             locationRequest = new LocationRequest();
-            locationRequest.setInterval(1000);
+            locationRequest.setInterval(5000);
             locationRequest.setFastestInterval(5000);
             locationRequest.setMaxWaitTime(5000);
             locationRequest.setPriority(LocationRequest.PRIORITY_HIGH_ACCURACY);
@@ -366,9 +362,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
 
             if (webView != null) {
-                Log.e("webview","resuming");
                 createLocationRequest();
                 startLocation();
+                Log.e("webview","resuming");
                 webView.onResume();
                 webView.resumeTimers();
             }
@@ -386,9 +382,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         location_updated = intent.getExtras().get("adresse").toString();
                         latitude_updated = intent.getDoubleExtra("latitude",0);
                         longitude_updated = intent.getDoubleExtra("longitude",0);
-
                         //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
-
                         Log.e("adresse",location_updated);
                         Log.e("latitude",""+latitude_updated);
                         Log.e("longitude",""+longitude_updated);
@@ -400,7 +394,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         provider_updated = intent.getStringExtra("provider");
                         speed_updated = intent.getFloatExtra("speed",0);
                         elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
-
 
                         Log.e("accuracy",""+accuracy_updated);
                         Log.e("altitude",""+altitude_updated);
@@ -435,7 +428,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting());
     }
 
-    //
     private void loadApplication() {
         sharedpreferences = getSharedPreferences(MyPREFERENCES, Context.MODE_PRIVATE);
         url_selected = sharedpreferences.getString("url_app","");
@@ -472,7 +464,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         webView.setWebViewClient(webViewClient); //Chargez l'URL dans WebView et non pas dans le navigateur web
     }
 
-    //
     class MyJavaScriptInterface {
         @JavascriptInterface
         public void onUrlChange(String url) {
@@ -510,15 +501,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         });
     }
 
+    //
     private void PageConnectionFailed() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
-        imageView.setImageResource(R.drawable.wifi3);
-        textView1.setText("Pas de connexion internet");
-        textView2.setText("Veuillez vérifier votre connexion internet \n et réessayez");
+        imageView.setImageResource(R.drawable.wifi4);
+        textView1.setVisibility(TextView.GONE);
+        textView2.setVisibility(TextView.GONE);
+        //textView1.setText("Pas de connexion internet");
+        //textView2.setText("Veuillez vérifier votre connexion internet \n et réessayez");
     }
 
-    ////
+    //
     private boolean RefreshNetworkAvailable() {
         ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         //network on
@@ -526,8 +520,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
                 if (!isConnected) {
-                    createLocationRequest();
-                    loadApplication();
+                    //createLocationRequest();
+                    //loadApplication();
                     isConnected = true;
                 }
                 return true;
@@ -539,6 +533,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return false;
     }
 
+    //
     private void PageSiteInactif() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
