@@ -89,14 +89,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     SharedPreferences sharedpreferences;
 
     int id_inserted;
-    String url_selected,email_user;
     Timestamp date_install;
+    String url_selected,email_user;
     Boolean isExecuted1 = false, isExecuted2 = false;
 
-    String location_updated,provider_updated;
     Long elapsedRealtimeNanos_updated;
-    Double latitude_updated,longitude_updated,altitude_updated;
+    String location_updated,provider_updated;
     Float accuracy_updated,bearing_updated,speed_updated;
+    Double latitude_updated,longitude_updated,altitude_updated;
 
 
     @Override
@@ -120,12 +120,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             isExecuted1 = true;
             Log.e("url","selected in onCreate");
             new SelectMySqlUrl().execute();
+            /*
             try {
-                Thread.sleep(5000);
+                Thread.sleep(3000);
             }
             catch (InterruptedException e) {
                 e.printStackTrace();
             }
+            */
         }
 
         runtimePermissions();
@@ -289,12 +291,10 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    ////
     protected void createLocationRequest() {
         final LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
         boolean isGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-        boolean isNetwork = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-        if (!isGPS) { //|| !isNetwork
+        if (!isGPS) {
             Log.e("Location Services","disabled");
             googleApiClient = new GoogleApiClient.Builder(this)
                     .addConnectionCallbacks(this)
@@ -366,19 +366,15 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
 
             if (webView != null) {
+                Log.e("webview","resuming");
                 createLocationRequest();
                 startLocation();
-                //Toast.makeText(getApplicationContext(),"webview resuming",Toast.LENGTH_LONG).show();
-                Log.e("webview","resuming");
-                WebSettings webSettings = webView.getSettings();
-                webSettings.setJavaScriptEnabled(true);
                 webView.onResume();
                 webView.resumeTimers();
             }
             else {
                 createLocationRequest();
                 startLocation();
-                //Toast.makeText(getApplicationContext(),"webview loading",Toast.LENGTH_LONG).show();
                 Log.e("webview","loading");
                 loadApplication();
             }
@@ -391,6 +387,13 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         latitude_updated = intent.getDoubleExtra("latitude",0);
                         longitude_updated = intent.getDoubleExtra("longitude",0);
 
+                        //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
+
+                        Log.e("adresse",location_updated);
+                        Log.e("latitude",""+latitude_updated);
+                        Log.e("longitude",""+longitude_updated);
+
+                        /*
                         accuracy_updated = intent.getFloatExtra("accuracy",0);
                         altitude_updated = intent.getDoubleExtra("altitude",0);
                         bearing_updated = intent.getFloatExtra("bearing",0);
@@ -398,10 +401,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         speed_updated = intent.getFloatExtra("speed",0);
                         elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
 
-                        //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
-                        Log.e("adresse",location_updated);
-                        Log.e("latitude",""+latitude_updated);
-                        Log.e("longitude",""+longitude_updated);
 
                         Log.e("accuracy",""+accuracy_updated);
                         Log.e("altitude",""+altitude_updated);
@@ -409,6 +408,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("provider",""+provider_updated);
                         Log.e("speed",""+speed_updated);
                         Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
+                        */
 
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
@@ -551,8 +551,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     protected void onPause() {
         super.onPause();
         if(webView != null) {
-            WebSettings webSettings = webView.getSettings();
-            webSettings.setJavaScriptEnabled(false);
             webView.onPause();
             webView.pauseTimers();
         }
@@ -570,7 +568,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(receiver != null) {
             unregisterReceiver(receiver);
         }
-
+        /*
         if (webView != null) {
             webView.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
             webView.clearHistory();
@@ -582,10 +580,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             webView.removeAllViews();
             webView.destroyDrawingCache();
             webView.pauseTimers();
-             */
+            //
             webView.destroy();
             webView = null;
         }
+        */
     }
 
     @Override
@@ -795,7 +794,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 editor.putString("url_app", url_app);
                 editor.apply();
             }
-            Log.e("", "La selection de l'url est effectuée");
+            Log.e("", "La selection de l'url est effectuée url = "+url_app);
         }
         catch (SQLException e) {
             e.printStackTrace();
@@ -903,7 +902,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    //
     private void insertHistorique(Connection con,String location,Double latitude,Double longitude,String email) {
         if(email != null) {
             String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_user, nom_machine, localisation, ip_lan, date_install, latitude_gps, longitude_gps) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";

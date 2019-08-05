@@ -84,40 +84,25 @@ public class GPS_Service extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        /*
-        // getting GPS status
-        boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
 
         // getting network status
         boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
-        // First get location from Network Provider
+        // get location from Network Provider
         if (isNetworkEnabled) {
-            locationManager.requestLocationUpdates( LocationManager.NETWORK_PROVIDER,  5000,  0, listener);
-            Log.d("Network", "Network");
-            if (locationManager != null) {
-                Location location = locationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
-                if (location != null) {
-                    lat = location.getLatitude();
-                    lng = location.getLongitude();
-                }
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener);
+            Log.e("Network", "NETWORK_PROVIDER");
+        }
+        else {
+            // getting GPS status
+            boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+
+            //get the location by GPS Provider
+            if (isGPSEnabled) {
+                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, listener);
+                Log.e("GPS", "GPS_PROVIDER");
             }
         }
-        //get the location by gps
-        if (isGPSEnabled) {
-            if (location == null) {
-                mLocationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER,5000,0, listener);
-                Log.d("GPS Enabled", "GPS Enabled");
-                if (mLocationManager != null) {location = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-                    if (location != null) {
-                        lat = location.getLatitude();
-                        lng = location.getLongitude();
-                    }
-                }
-            }
-        }
-        */
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener); // GPS_PROVIDER
     }
 
     @Override
