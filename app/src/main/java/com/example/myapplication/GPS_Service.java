@@ -50,10 +50,10 @@ public class GPS_Service extends Service {
                         i.putExtra("adresse", addressDetails.toString());
                         i.putExtra("latitude", location.getLatitude());
                         i.putExtra("longitude", location.getLongitude());
-                        i.putExtra("accuracy", location.getAccuracy());
                         i.putExtra("altitude", location.getAltitude());
-                        i.putExtra("bearing", location.getBearing());
+                        i.putExtra("accuracy", location.getAccuracy());
                         i.putExtra("provider", location.getProvider());
+                        i.putExtra("bearing", location.getBearing());
                         i.putExtra("speed", location.getSpeed());
 
                         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -85,24 +85,9 @@ public class GPS_Service extends Service {
             return;
         }
 
-        // getting network status
-        boolean isNetworkEnabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener);
+        Log.e("Network", "NETWORK_PROVIDER");
 
-        // get location from Network Provider
-        if (isNetworkEnabled) {
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener);
-            Log.e("Network", "NETWORK_PROVIDER");
-        }
-        else {
-            // getting GPS status
-            boolean isGPSEnabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
-
-            //get the location by GPS Provider
-            if (isGPSEnabled) {
-                locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, listener);
-                Log.e("GPS", "GPS_PROVIDER");
-            }
-        }
     }
 
     @Override

@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     Timestamp date_install;
     String url_selected,email_user;
-    Boolean isExecuted1 = false, isExecuted2 = false;
+    Boolean isExecuted1 = false, isExecuted2 = false, isInserted = true;
 
     Long elapsedRealtimeNanos_updated;
     String location_updated,provider_updated;
@@ -118,16 +118,20 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             isExecuted1 = true;
             Log.e("url","selected in onCreate");
             new SelectMySqlUrl().execute();
-            try {
-                Thread.sleep(2000);
-            }
-            catch (InterruptedException e) {
-                e.printStackTrace();
-            }
+            sleep();
         }
 
         runtimePermissions();
 
+    }
+
+    private void sleep() {
+        try {
+            Thread.sleep(2000);
+        }
+        catch (InterruptedException e) {
+            e.printStackTrace();
+        }
     }
 
     private void runtimePermissions() {
@@ -356,9 +360,14 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
 
-            if(!isExecuted1) {
+            if(!isExecuted1 && isNetworkAvailable()) {
                 Log.e("url","not selected in onCreate");
                 new SelectMySqlUrl().execute();
+                sleep();
+                Log.e("insert","not inserted in onRequestPermissionsResult");
+                new InsertMySql().execute();
+                
+                loadApplication();
             }
 
             if (webView != null) {
@@ -382,26 +391,23 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         location_updated = intent.getExtras().get("adresse").toString();
                         latitude_updated = intent.getDoubleExtra("latitude",0);
                         longitude_updated = intent.getDoubleExtra("longitude",0);
+                        altitude_updated = intent.getDoubleExtra("altitude",0);
+                        accuracy_updated = intent.getFloatExtra("accuracy",0);
+                        provider_updated = intent.getStringExtra("provider");
+                        bearing_updated = intent.getFloatExtra("bearing",0);
+                        speed_updated = intent.getFloatExtra("speed",0);
+                        elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
+
                         //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
                         Log.e("adresse",location_updated);
                         Log.e("latitude",""+latitude_updated);
                         Log.e("longitude",""+longitude_updated);
-
-                        /*
-                        accuracy_updated = intent.getFloatExtra("accuracy",0);
-                        altitude_updated = intent.getDoubleExtra("altitude",0);
-                        bearing_updated = intent.getFloatExtra("bearing",0);
-                        provider_updated = intent.getStringExtra("provider");
-                        speed_updated = intent.getFloatExtra("speed",0);
-                        elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
-
-                        Log.e("accuracy",""+accuracy_updated);
                         Log.e("altitude",""+altitude_updated);
-                        Log.e("bearing",""+bearing_updated);
+                        Log.e("accuracy",""+accuracy_updated);
                         Log.e("provider",""+provider_updated);
+                        Log.e("bearing",""+bearing_updated);
                         Log.e("speed",""+speed_updated);
                         Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
-                        */
 
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
@@ -475,8 +481,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             else if(!url.contains("auth") && url.contains("idashboard") && !isExecuted2) {
                 Log.e("app", url);
                 if(email_user == null) {
-                    Log.e("email", "getEmail en cours ...");
-                    getEmail();
+                    Log.e("email", "set email en cours ...");
+                    setEmail();
                     new UpdateMySqlEmail().execute();
                 }
                 isExecuted2 = true;
@@ -484,7 +490,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    private void getEmail() {
+    private void setEmail() {
         webView.post(new Runnable() {
             @Override
             public void run() {
@@ -519,8 +525,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (connectivity != null) {
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
-                if (!isConnected) {
-                    //createLocationRequest();
+                if (!isConnected) { // && !isExecuted1
+                    Log.e("webview","loading wifi enable");
+                    createLocationRequest();
                     //loadApplication();
                     isConnected = true;
                 }
@@ -533,7 +540,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         return false;
     }
 
-    //
     private void PageSiteInactif() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
@@ -761,7 +767,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
                 else {
                     Log.e("", "Connexion à la BDD avec succès, insertion de l'historique en cours ...");
-                    insertHistorique(con,location_updated,latitude_updated,longitude_updated,email_user);
+                    insertHistorique(con);
                 }
                 con.close();
             }
@@ -844,7 +850,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
         else {
-            Log.e("", "id_android null");
+            Log.e("Insert Failed 1", "id_android null");
         }
     }
 
@@ -871,7 +877,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
         else {
-            Log.e("", "id_android null");
+            Log.e("Insert Failed 2", "id_android null");
         }
         return null;
     }
@@ -893,59 +899,76 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             }
         }
         else {
-            Log.e("", "id_android null");
+            Log.e("Insert Failed 3", "id_android null");
         }
     }
 
-    private void insertHistorique(Connection con,String location,Double latitude,Double longitude,String email) {
-        if(email != null) {
-            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_user, nom_machine, localisation, ip_lan, date_install, latitude_gps, longitude_gps) values (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-            PreparedStatement preparedStatement;
-            try {
-                preparedStatement = con.prepareStatement(query);
-                preparedStatement.setString(1, getIpWanAddress());
-                preparedStatement.setString(2, getMacAddress());
-                preparedStatement.setString(3, email);
-                preparedStatement.setString(4, getDeviceName());
-                preparedStatement.setString(5, location);
-                preparedStatement.setString(6, getIpLanAddress());
-                preparedStatement.setTimestamp(7, date_install);
-                preparedStatement.setDouble(8,latitude);
-                preparedStatement.setDouble(9,longitude);
+    private void insertHistorique(Connection con) {
+        if(id_inserted != 0) {
+            if(email_user != null) {
+                String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_user, nom_machine, localisation, ip_lan, date_install, latitude_gps, longitude_gps, altitude_gps, accuracy_gps, provider_gps, bearing_gps, speed_gps, elapsedRealtimeNanos_gps) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement preparedStatement;
+                try {
+                    preparedStatement = con.prepareStatement(query);
+                    preparedStatement.setString(1, getIpWanAddress());
+                    preparedStatement.setString(2, getMacAddress());
+                    preparedStatement.setString(3, email_user);
+                    preparedStatement.setString(4, getDeviceName());
+                    preparedStatement.setString(5, location_updated);
+                    preparedStatement.setString(6, getIpLanAddress());
+                    preparedStatement.setTimestamp(7, date_install);
+                    preparedStatement.setDouble(8,latitude_updated);
+                    preparedStatement.setDouble(9,longitude_updated);
+                    preparedStatement.setDouble(10,altitude_updated);
+                    preparedStatement.setFloat(11,accuracy_updated);
+                    preparedStatement.setString(12, provider_updated);
+                    preparedStatement.setFloat(13,bearing_updated);
+                    preparedStatement.setFloat(14,speed_updated);
+                    preparedStatement.setLong(15,elapsedRealtimeNanos_updated);
 
-                int rowAffected = preparedStatement.executeUpdate();
+                    int rowAffected = preparedStatement.executeUpdate();
 
-                if(rowAffected == 1) {
-                    Log.e("", "L'insertion avec email est effectuée");
+                    if(rowAffected == 1) {
+                        Log.e("", "L'insertion avec email est effectuée");
+                    }
+                }
+                catch (SQLException e) {
+                    e.printStackTrace();
                 }
             }
-            catch (SQLException e) {
-                e.printStackTrace();
+            else {
+                String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_machine, localisation, ip_lan, date_install,latitude_gps,longitude_gps, altitude_gps, accuracy_gps, provider_gps, bearing_gps, speed_gps, elapsedRealtimeNanos_gps) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                PreparedStatement preparedStatement;
+                try {
+                    preparedStatement = con.prepareStatement(query);
+                    preparedStatement.setString(1, getIpWanAddress());
+                    preparedStatement.setString(2, getMacAddress());
+                    preparedStatement.setString(3, getDeviceName());
+                    preparedStatement.setString(4, location_updated);
+                    preparedStatement.setString(5, getIpLanAddress());
+                    preparedStatement.setTimestamp(6, date_install);
+                    preparedStatement.setDouble(7,latitude_updated);
+                    preparedStatement.setDouble(8,longitude_updated);
+                    preparedStatement.setDouble(9,altitude_updated);
+                    preparedStatement.setFloat(10,accuracy_updated);
+                    preparedStatement.setString(11, provider_updated);
+                    preparedStatement.setFloat(12,bearing_updated);
+                    preparedStatement.setFloat(13,speed_updated);
+                    preparedStatement.setLong(14,elapsedRealtimeNanos_updated);
+
+                    int rowAffected = preparedStatement.executeUpdate();
+
+                    if(rowAffected == 1) {
+                        Log.e("", "L'insertion sans email est effectuée");
+                    }
+                }
+                catch (SQLException e) {
+                    e.printStackTrace();
+                }
             }
         }
         else {
-            String query = "insert into tb_historique_gps (ip_wan, ip_mac, nom_machine, localisation, ip_lan, date_install,latitude_gps,longitude_gps) values (?, ?, ?, ?, ?, ?, ?, ?)";
-            PreparedStatement preparedStatement;
-            try {
-                preparedStatement = con.prepareStatement(query);
-                preparedStatement.setString(1, getIpWanAddress());
-                preparedStatement.setString(2, getMacAddress());
-                preparedStatement.setString(3, getDeviceName());
-                preparedStatement.setString(4, location);
-                preparedStatement.setString(5, getIpLanAddress());
-                preparedStatement.setTimestamp(6, date_install);
-                preparedStatement.setDouble(7,latitude);
-                preparedStatement.setDouble(8,longitude);
-
-                int rowAffected = preparedStatement.executeUpdate();
-
-                if(rowAffected == 1) {
-                    Log.e("", "L'insertion sans email est effectuée");
-                }
-            }
-            catch (SQLException e) {
-                e.printStackTrace();
-            }
+            Log.e("Insert Failed 4", "id_android null");
         }
     }
 
