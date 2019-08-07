@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     Timestamp date_install;
     String url_selected,email_user;
-    Boolean isExecuted1 = false, isExecuted2 = false, isInserted = true;
+    Boolean isExecuted1 = false, isExecuted2 = false,isExecuted3 = false, isInserted = true;
 
     Long elapsedRealtimeNanos_updated;
     String location_updated,provider_updated;
@@ -364,24 +364,25 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 Log.e("url","not selected in onCreate");
                 new SelectMySqlUrl().execute();
                 sleep();
-                Log.e("insert","not inserted in onRequestPermissionsResult");
-                new InsertMySql().execute();
-                
+                sleep();
+                sleep();
                 loadApplication();
-            }
-
-            if (webView != null) {
-                createLocationRequest();
-                startLocation();
-                Log.e("webview","resuming");
-                webView.onResume();
-                webView.resumeTimers();
+                Log.e("RefreshNetworkAvailable","loadApplication finished");
             }
             else {
-                createLocationRequest();
-                startLocation();
-                Log.e("webview","loading");
-                loadApplication();
+                if (webView != null && isNetworkAvailable()) {
+                    createLocationRequest();
+                    startLocation();
+                    Log.e("webview","resuming");
+                    webView.onResume();
+                    webView.resumeTimers();
+                }
+                else if (webView == null && isNetworkAvailable()) {
+                    createLocationRequest();
+                    startLocation();
+                    Log.e("webview","loading");
+                    loadApplication();
+                }
             }
 
             if (broadcastReceiver == null) {
@@ -525,10 +526,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if (connectivity != null) {
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
-                if (!isConnected) { // && !isExecuted1
-                    Log.e("webview","loading wifi enable");
+                if (!isConnected) {
+                    if(id_inserted == 0 && !isExecuted3) {
+                        Log.e("insert","not inserted in onRequestPermissionsResult");
+                        new InsertMySql().execute();
+                        isExecuted3 = true;
+                    }
+
+                    Log.e("RefreshNetworkAvailable","network enable");
                     createLocationRequest();
-                    //loadApplication();
+                    startLocation();
                     isConnected = true;
                 }
                 return true;
@@ -640,7 +647,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         @Override
         protected void onPreExecute() {
             super.onPreExecute();
-            new SelectMySqlUrl().execute();
         }
 
         @SuppressLint("WrongThread")
@@ -666,6 +672,9 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
+            if(result == null) {
+                isInserted = false;
+            }
         }
     }
 
