@@ -22,7 +22,7 @@ import java.util.Locale;
 
 public class GPS_Service extends Service {
 
-    private LocationListener listener;
+    private LocationListener listener,locationListenerGps,locationListenerNetwork;
     private LocationManager locationManager;
 
     @Override
@@ -32,6 +32,9 @@ public class GPS_Service extends Service {
 
     @Override
     public void onCreate() {
+        boolean gps_enabled;
+        boolean network_enabled;
+
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -84,10 +87,126 @@ public class GPS_Service extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-
         locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener);
-        Log.e("Network", "NETWORK_PROVIDER");
 
+        /*
+        locationListenerGps = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                Intent i = new Intent("location_update_gps");
+                List<Address> addresses ;
+                Geocoder geocoder = new Geocoder(GPS_Service.this, Locale.getDefault());
+                try {
+                    addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses == null || addresses.size()  == 0) {
+                        Log.e("", "no address found");
+                    }
+                    else if (addresses != null && addresses.size() > 0) {
+                        Address address = addresses.get(0);
+                        StringBuffer addressDetails = new StringBuffer();
+                        addressDetails.append(address.getAddressLine(0));
+                        i.putExtra("adresse_gps", addressDetails.toString());
+                        i.putExtra("latitude_gps", location.getLatitude());
+                        i.putExtra("longitude_gps", location.getLongitude());
+                        i.putExtra("altitude_gps", location.getAltitude());
+                        i.putExtra("accuracy_gps", location.getAccuracy());
+                        i.putExtra("provider_gps", location.getProvider());
+                        i.putExtra("bearing_gps", location.getBearing());
+                        i.putExtra("speed_gps", location.getSpeed());
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            i.putExtra("elapsedRealtimeNanos_gps", location.getElapsedRealtimeNanos());
+                        }
+
+                        sendBroadcast(i);
+                    }
+                }
+                catch (IOException ioException) {
+                    Log.e("", "Error in getting address for the location");
+                }
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle bundle) {
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+            }
+        };
+        locationListenerNetwork = new LocationListener() {
+            @Override
+            public void onLocationChanged(Location location) {
+                Intent i = new Intent("location_update");
+                List<Address> addresses ;
+                Geocoder geocoder = new Geocoder(GPS_Service.this, Locale.getDefault());
+                try {
+                    addresses = geocoder.getFromLocation(location.getLatitude(), location.getLongitude(), 1);
+                    if (addresses == null || addresses.size()  == 0) {
+                        Log.e("", "no address found");
+                    }
+                    else if (addresses != null && addresses.size() > 0) {
+                        Address address = addresses.get(0);
+                        StringBuffer addressDetails = new StringBuffer();
+                        addressDetails.append(address.getAddressLine(0));
+                        i.putExtra("adresse", addressDetails.toString());
+                        i.putExtra("latitude", location.getLatitude());
+                        i.putExtra("longitude", location.getLongitude());
+                        i.putExtra("altitude", location.getAltitude());
+                        i.putExtra("accuracy", location.getAccuracy());
+                        i.putExtra("provider", location.getProvider());
+                        i.putExtra("bearing", location.getBearing());
+                        i.putExtra("speed", location.getSpeed());
+
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            i.putExtra("elapsedRealtimeNanos", location.getElapsedRealtimeNanos());
+                        }
+
+                        sendBroadcast(i);
+                    }
+                }
+                catch (IOException ioException) {
+                    Log.e("", "Error in getting address for the location");
+                }
+            }
+
+            @Override
+            public void onStatusChanged(String provider, int status, Bundle bundle) {
+            }
+
+            @Override
+            public void onProviderEnabled(String provider) {
+            }
+
+            @Override
+            public void onProviderDisabled(String provider) {
+            }
+        };
+
+        locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            return;
+        }
+
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0,locationListenerGps);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0,locationListenerNetwork);
+        */
+
+        /*
+        gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        network_enabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        if (gps_enabled) {
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0,locationListenerGps);
+        }
+        if (network_enabled) {
+            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0,locationListenerNetwork);
+        }
+        */
     }
 
     @Override

@@ -389,6 +389,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
 
                         //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
+
                         Log.e("adresse",location_updated);
                         Log.e("latitude",""+latitude_updated);
                         Log.e("longitude",""+longitude_updated);
@@ -397,8 +398,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("provider",""+provider_updated);
                         Log.e("bearing",""+bearing_updated);
                         Log.e("speed",""+speed_updated);
-                        Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
-
+                        Log.e("elapsedRealtime",""+elapsedRealtimeNanos_updated);
+                        /*
+                        Log.e("adresse_gps",""+intent.getExtras().get("adresse_gps"));
+                        Log.e("latitude_gps",""+intent.getDoubleExtra("latitude_gps",0));
+                        Log.e("longitude_gps",""+intent.getDoubleExtra("longitude_gps",0));
+                        Log.e("altitude_gps",""+intent.getDoubleExtra("altitude_gps",0));
+                        Log.e("accuracy_gps",""+intent.getFloatExtra("accuracy_gps",0));
+                        Log.e("provider_gps",""+intent.getStringExtra("provider_gps"));
+                        Log.e("bearing_gps",""+intent.getFloatExtra("bearing_gps",0));
+                        Log.e("speed_gps",""+intent.getFloatExtra("speed_gps",0));
+                        Log.e("elapsedRealtime_gps",""+intent.getLongExtra("elapsedRealtimeNanos_gps",0));
+                        */
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
                     }
@@ -444,7 +455,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK); //LOAD_CACHE_ONLY, LOAD_DEFAULT, LOAD_NO_CACHE and LOAD_CACHE_ELSE_NETWORK
 
         /*
-        webSettings.setSupportMultipleWindows(true);
+
         webSettings.setLoadWithOverviewMode(true);
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.setScrollbarFadingEnabled(true);
