@@ -96,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     Float accuracy_updated,bearing_updated,speed_updated;
     Double latitude_updated,longitude_updated,altitude_updated;
 
-    //
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -354,6 +354,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    //
     @Override
     protected void onResume() {
         super.onResume();
@@ -363,8 +364,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             if(!isExecuted1 && isNetworkAvailable()) {
                 Log.e("url","not selected in onCreate");
                 new SelectMySqlUrl().execute();
-                sleep();
-                sleep();
                 sleep();
                 loadApplication();
                 Log.e("RefreshNetworkAvailable","loadApplication finished");
@@ -527,15 +526,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
                 if (!isConnected) {
+                    /*
                     if(id_inserted == 0 && !isExecuted3) {
                         Log.e("insert","not inserted in onRequestPermissionsResult");
                         new InsertMySql().execute();
                         isExecuted3 = true;
                     }
+                    */
 
                     Log.e("RefreshNetworkAvailable","network enable");
                     createLocationRequest();
                     startLocation();
+                    loadApplication();
                     isConnected = true;
                 }
                 return true;
