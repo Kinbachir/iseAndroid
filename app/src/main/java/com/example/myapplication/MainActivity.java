@@ -89,7 +89,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     int id_inserted;
     Timestamp date_install;
     String url_selected,email_user;
-    Boolean isExecuted1 = false, isExecuted2 = false,isExecuted3 = false, isInserted = true;
+    Boolean isExecuted1 = false, isExecuted2 = false,isExecuted3 = false,isExecuted4 = false, isInserted = false;
 
     Long elapsedRealtimeNanos_updated;
     String location_updated,provider_updated;
@@ -358,30 +358,20 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onResume() {
         super.onResume();
-
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
 
-            if(!isExecuted1 && isNetworkAvailable()) {
-                Log.e("url","not selected in onCreate");
-                new SelectMySqlUrl().execute();
-                sleep();
-                loadApplication();
-                Log.e("RefreshNetworkAvailable","loadApplication finished");
+            if (webView != null && isNetworkAvailable()) {
+                createLocationRequest();
+                startLocation();
+                Log.e("webview","resuming");
+                webView.onResume();
+                webView.resumeTimers();
             }
-            else {
-                if (webView != null && isNetworkAvailable()) {
-                    createLocationRequest();
-                    startLocation();
-                    Log.e("webview","resuming");
-                    webView.onResume();
-                    webView.resumeTimers();
-                }
-                else if (webView == null && isNetworkAvailable()) {
-                    createLocationRequest();
-                    startLocation();
-                    Log.e("webview","loading");
-                    loadApplication();
-                }
+            else if (webView == null && isNetworkAvailable()) {
+                createLocationRequest();
+                startLocation();
+                Log.e("webview","loading");
+                loadApplication();
             }
 
             if (broadcastReceiver == null) {
@@ -443,17 +433,18 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         webView = findViewById(R.id.webView);
         WebSettings webSettings = webView.getSettings();
+
         webSettings.setJavaScriptEnabled(true);
         webSettings.setJavaScriptCanOpenWindowsAutomatically(true);
         webSettings.setDomStorageEnabled(true);
+        webSettings.setUseWideViewPort(true);
+
+        webSettings.setAppCachePath("/data/data/" + getPackageName() + "/cache");
         webSettings.setAppCacheEnabled(true);
+        webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK); //LOAD_CACHE_ONLY, LOAD_DEFAULT, LOAD_NO_CACHE and LOAD_CACHE_ELSE_NETWORK
 
         /*
-        webSettings.setCacheMode(WebSettings.LOAD_DEFAULT); //LOAD_CACHE_ONLY, LOAD_DEFAULT, LOAD_NO_CACHE and LOAD_CACHE_ELSE_NETWORK.
-        String appCachePath = getApplicationContext().getCacheDir().getAbsolutePath();
-        webSettings.setAppCachePath(appCachePath);
         webSettings.setSupportMultipleWindows(true);
-        webSettings.setUseWideViewPort(true);
         webSettings.setLoadWithOverviewMode(true);
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.setScrollbarFadingEnabled(true);
@@ -507,7 +498,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         });
     }
 
-    //
     private void PageConnectionFailed() {
         linearLayout1.setVisibility(LinearLayout.GONE);
         linearLayout2.setVisibility(LinearLayout.VISIBLE);
@@ -519,25 +509,39 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     //
-    private boolean RefreshNetworkAvailable() {
+    private Boolean RefreshNetworkAvailable() {
         ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         //network on
         if (connectivity != null) {
             NetworkInfo activeNetworkInfo = connectivity.getActiveNetworkInfo();
             if (activeNetworkInfo != null && activeNetworkInfo.isConnectedOrConnecting()) {
                 if (!isConnected) {
-                    /*
-                    if(id_inserted == 0 && !isExecuted3) {
-                        Log.e("insert","not inserted in onRequestPermissionsResult");
+                    sleep();
+                    sleep();
+
+                    if (!isInserted && !isExecuted3) {
+                        Log.e("insert", "not inserted in onRequestPermissionsResult");
                         new InsertMySql().execute();
                         isExecuted3 = true;
+                        sleep();
+                        sleep();
                     }
-                    */
 
-                    Log.e("RefreshNetworkAvailable","network enable");
                     createLocationRequest();
                     startLocation();
-                    loadApplication();
+
+                    if(!isExecuted1 && !isExecuted4) {
+                        Log.e("url","not selected in onCreate");
+                        new SelectMySqlUrl().execute();
+                        isExecuted4 = true;
+                        sleep();
+                        sleep();
+                    }
+                    else {
+                        Log.e("webview","loading wifi on");
+                        loadApplication();
+                    }
+
                     isConnected = true;
                 }
                 return true;
@@ -566,7 +570,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
-    //
     @Override
     protected void onDestroy() {
         super.onDestroy();
@@ -662,6 +665,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 }
                 else {
                     Log.e("", "Connexion à la BDD avec succès, insertion en cours ...");
+                    isInserted = true;
                     insertData(con);
                 }
                 con.close();
@@ -674,9 +678,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
 
         @Override
         protected void onPostExecute(String result) {
-            if(result == null) {
-                isInserted = false;
-            }
         }
     }
 
