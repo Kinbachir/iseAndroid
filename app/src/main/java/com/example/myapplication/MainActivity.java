@@ -101,7 +101,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     Float accuracy_gps,bearing_gps,speed_gps;
     Double latitude_gps,longitude_gps,altitude_gps;
 
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -127,6 +126,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         runtimePermissions();
+
     }
 
     private void sleep() {
@@ -363,6 +363,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     @Override
     protected void onResume() {
         super.onResume();
+
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
 
             if (webView != null && isNetworkAvailable()) {
@@ -383,7 +384,8 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 broadcastReceiver = new BroadcastReceiver() {
                     @Override
                     public void onReceive(Context context, Intent intent) {
-                        location_updated = intent.getExtras().get("adresse").toString();
+
+                        location_updated = intent.getStringExtra("adresse");
                         latitude_updated = intent.getDoubleExtra("latitude",0);
                         longitude_updated = intent.getDoubleExtra("longitude",0);
                         altitude_updated = intent.getDoubleExtra("altitude",0);
@@ -394,7 +396,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         elapsedRealtimeNanos_updated = intent.getLongExtra("elapsedRealtimeNanos",0);
 
                         //Toast.makeText(getApplicationContext(),location_updated,Toast.LENGTH_LONG).show();
-
                         Log.e("adresse",location_updated);
                         Log.e("latitude",""+latitude_updated);
                         Log.e("longitude",""+longitude_updated);
@@ -403,7 +404,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("provider",""+provider_updated);
                         Log.e("bearing",""+bearing_updated);
                         Log.e("speed",""+speed_updated);
-                        Log.e("elapsedRealtime",""+elapsedRealtimeNanos_updated);
+                        Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
 
                         /*
 						location_gps = intent.getStringExtra("adresse_gps");
@@ -425,7 +426,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("bearing_gps",""+bearing_gps);
                         Log.e("speed_gps",""+speed_gps);
                         Log.e("elapsedRealtime_gps",""+elapsedRealtimeNanos_gps);
-						*/
+                        */
 
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
@@ -443,6 +444,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                 };
             }
             registerReceiver(receiver, new IntentFilter(ConnectivityManager.CONNECTIVITY_ACTION));
+
         }
     }
 
@@ -472,7 +474,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         webSettings.setCacheMode(WebSettings.LOAD_CACHE_ELSE_NETWORK); //LOAD_CACHE_ONLY, LOAD_DEFAULT, LOAD_NO_CACHE and LOAD_CACHE_ELSE_NETWORK
 
         /*
-
+        webSettings.setSupportMultipleWindows(true);
         webSettings.setLoadWithOverviewMode(true);
         webView.setScrollBarStyle(WebView.SCROLLBARS_OUTSIDE_OVERLAY);
         webView.setScrollbarFadingEnabled(true);
@@ -526,17 +528,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         });
     }
 
-    private void PageConnectionFailed() {
-        linearLayout1.setVisibility(LinearLayout.GONE);
-        linearLayout2.setVisibility(LinearLayout.VISIBLE);
-        imageView.setImageResource(R.drawable.wifi4);
-        textView1.setVisibility(TextView.GONE);
-        textView2.setVisibility(TextView.GONE);
-        //textView1.setText("Pas de connexion internet");
-        //textView2.setText("Veuillez vérifier votre connexion internet \n et réessayez");
-    }
-
-    //
     private Boolean RefreshNetworkAvailable() {
         ConnectivityManager connectivity = (ConnectivityManager) getSystemService(Context.CONNECTIVITY_SERVICE);
         //network on
@@ -579,6 +570,16 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         PageConnectionFailed();
         isConnected = false;
         return false;
+    }
+
+    private void PageConnectionFailed() {
+        linearLayout1.setVisibility(LinearLayout.GONE);
+        linearLayout2.setVisibility(LinearLayout.VISIBLE);
+        imageView.setImageResource(R.drawable.wifi4);
+        textView1.setVisibility(TextView.GONE);
+        textView2.setVisibility(TextView.GONE);
+        //textView1.setText("Pas de connexion internet");
+        //textView2.setText("Veuillez vérifier votre connexion internet \n et réessayez");
     }
 
     private void PageSiteInactif() {
