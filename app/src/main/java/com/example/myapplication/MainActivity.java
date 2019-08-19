@@ -16,6 +16,10 @@ import android.content.IntentSender;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 
+import android.location.Address;
+import android.location.Geocoder;
+import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
@@ -50,6 +54,7 @@ import com.google.android.gms.location.LocationSettingsResult;
 import com.google.android.gms.location.LocationSettingsStatusCodes;
 
 import java.io.BufferedReader;
+import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.InetAddress;
 import java.net.NetworkInterface;
@@ -63,6 +68,7 @@ import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.Collections;
 import java.util.List;
+import java.util.Locale;
 
 public class MainActivity extends AppCompatActivity implements GoogleApiClient.ConnectionCallbacks, GoogleApiClient.OnConnectionFailedListener {
 
@@ -96,11 +102,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     Float accuracy_updated,bearing_updated,speed_updated;
     Double latitude_updated,longitude_updated,altitude_updated;
 
-    Long elapsedRealtimeNanos_gps;
-    String location_gps,provider_gps;
-    Float accuracy_gps,bearing_gps,speed_gps;
-    Double latitude_gps,longitude_gps,altitude_gps;
-
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -126,6 +127,12 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         runtimePermissions();
+
+        /*
+        if(webView != null) {
+            webView.reload();
+        }
+        */
 
     }
 
@@ -359,12 +366,56 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
     }
 
+    @SuppressLint("MissingPermission")
+    private void locationWithGPS() {
+        final LocationManager locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        boolean isGPS = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        if (isGPS) {
+            LocationListener locationListener = new MyLocationListener();
+            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 0, 0, locationListener);
+        }
+    }
+
+    private class MyLocationListener implements LocationListener {
+
+        @Override
+        public void onLocationChanged(Location loc) {
+            List<Address> addresses;
+            Geocoder gcd = new Geocoder(getBaseContext(), Locale.getDefault());
+            try {
+                addresses = gcd.getFromLocation(loc.getLatitude(),loc.getLongitude(), 1);
+                if (addresses == null || addresses.size()  == 0) {
+                    Log.e("", "no address found with GPS");
+                }
+                else if (addresses != null && addresses.size() > 0) {
+                    Address address = addresses.get(0);
+                    StringBuffer addressDetails = new StringBuffer();
+                    addressDetails.append(address.getAddressLine(0));
+                        Log.e("adresse with GPS",addressDetails.toString());
+                }
+            }
+            catch (IOException ioException) {
+                Log.e("", "Error in getting address for the location");
+            }
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {}
+
+        @Override
+        public void onProviderEnabled(String provider) {}
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {}
+    }
+
     //
     @Override
     protected void onResume() {
         super.onResume();
-
         if(ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED){
+
+            locationWithGPS();
 
             if (webView != null && isNetworkAvailable()) {
                 createLocationRequest();
@@ -405,28 +456,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("bearing",""+bearing_updated);
                         Log.e("speed",""+speed_updated);
                         Log.e("elapsedRealtimeNanos",""+elapsedRealtimeNanos_updated);
-
-                        /*
-						location_gps = intent.getStringExtra("adresse_gps");
-                        latitude_gps = intent.getDoubleExtra("latitude_gps",0);
-                        longitude_gps = intent.getDoubleExtra("longitude_gps",0);
-                        altitude_gps = intent.getDoubleExtra("altitude_gps",0);
-                        accuracy_gps = intent.getFloatExtra("accuracy_gps",0);
-                        provider_gps = intent.getStringExtra("provider_gps");
-                        bearing_gps = intent.getFloatExtra("bearing_gps",0);
-                        speed_gps = intent.getFloatExtra("speed_gps",0);
-                        elapsedRealtimeNanos_gps = intent.getLongExtra("elapsedRealtimeNanos_gps",0);
-
-                        Log.e("adresse_gps",""+location_gps);
-                        Log.e("latitude_gps",""+latitude_gps);
-                        Log.e("longitude_gps",""+longitude_gps);
-                        Log.e("altitude_gps",""+altitude_gps);
-                        Log.e("accuracy_gps",""+accuracy_gps);
-                        Log.e("provider_gps",""+provider_gps);
-                        Log.e("bearing_gps",""+bearing_gps);
-                        Log.e("speed_gps",""+speed_gps);
-                        Log.e("elapsedRealtime_gps",""+elapsedRealtimeNanos_gps);
-                        */
 
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
@@ -610,6 +639,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         if(receiver != null) {
             unregisterReceiver(receiver);
         }
+
         /*
         if (webView != null) {
             webView.loadDataWithBaseURL(null, "", "text/html", "utf-8", null);
