@@ -96,6 +96,11 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     Float accuracy_updated,bearing_updated,speed_updated;
     Double latitude_updated,longitude_updated,altitude_updated;
 
+    Long elapsedRealtimeNanos_gps;
+    String location_gps,provider_gps;
+    Float accuracy_gps,bearing_gps,speed_gps;
+    Double latitude_gps,longitude_gps,altitude_gps;
+
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -122,7 +127,6 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
         }
 
         runtimePermissions();
-
     }
 
     private void sleep() {
@@ -348,6 +352,7 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
     }
 
     private void startLocation() {
+        Log.e("service","starting");
         if(isNetworkAvailable()){
             Intent i = new Intent(getApplicationContext(),GPS_Service.class);
             startService(i);
@@ -399,17 +404,29 @@ public class MainActivity extends AppCompatActivity implements GoogleApiClient.C
                         Log.e("bearing",""+bearing_updated);
                         Log.e("speed",""+speed_updated);
                         Log.e("elapsedRealtime",""+elapsedRealtimeNanos_updated);
+
                         /*
-                        Log.e("adresse_gps",""+intent.getExtras().get("adresse_gps"));
-                        Log.e("latitude_gps",""+intent.getDoubleExtra("latitude_gps",0));
-                        Log.e("longitude_gps",""+intent.getDoubleExtra("longitude_gps",0));
-                        Log.e("altitude_gps",""+intent.getDoubleExtra("altitude_gps",0));
-                        Log.e("accuracy_gps",""+intent.getFloatExtra("accuracy_gps",0));
-                        Log.e("provider_gps",""+intent.getStringExtra("provider_gps"));
-                        Log.e("bearing_gps",""+intent.getFloatExtra("bearing_gps",0));
-                        Log.e("speed_gps",""+intent.getFloatExtra("speed_gps",0));
-                        Log.e("elapsedRealtime_gps",""+intent.getLongExtra("elapsedRealtimeNanos_gps",0));
-                        */
+						location_gps = intent.getStringExtra("adresse_gps");
+                        latitude_gps = intent.getDoubleExtra("latitude_gps",0);
+                        longitude_gps = intent.getDoubleExtra("longitude_gps",0);
+                        altitude_gps = intent.getDoubleExtra("altitude_gps",0);
+                        accuracy_gps = intent.getFloatExtra("accuracy_gps",0);
+                        provider_gps = intent.getStringExtra("provider_gps");
+                        bearing_gps = intent.getFloatExtra("bearing_gps",0);
+                        speed_gps = intent.getFloatExtra("speed_gps",0);
+                        elapsedRealtimeNanos_gps = intent.getLongExtra("elapsedRealtimeNanos_gps",0);
+
+                        Log.e("adresse_gps",""+location_gps);
+                        Log.e("latitude_gps",""+latitude_gps);
+                        Log.e("longitude_gps",""+longitude_gps);
+                        Log.e("altitude_gps",""+altitude_gps);
+                        Log.e("accuracy_gps",""+accuracy_gps);
+                        Log.e("provider_gps",""+provider_gps);
+                        Log.e("bearing_gps",""+bearing_gps);
+                        Log.e("speed_gps",""+speed_gps);
+                        Log.e("elapsedRealtime_gps",""+elapsedRealtimeNanos_gps);
+						*/
+
                         new UpdateMySqlLocation().execute();
                         new InsertMySqlHistorique().execute();
                     }

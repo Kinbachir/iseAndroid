@@ -32,9 +32,6 @@ public class GPS_Service extends Service {
 
     @Override
     public void onCreate() {
-        boolean gps_enabled;
-        boolean network_enabled;
-
         listener = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
@@ -87,13 +84,15 @@ public class GPS_Service extends Service {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
-        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0, listener);
+
+        Log.e("Providers",locationManager.getProviders(true).toString());
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0, listener);
 
         /*
         locationListenerGps = new LocationListener() {
             @Override
             public void onLocationChanged(Location location) {
-                Intent i = new Intent("location_update_gps");
+                Intent i = new Intent("location_update");
                 List<Address> addresses ;
                 Geocoder geocoder = new Geocoder(GPS_Service.this, Locale.getDefault());
                 try {
@@ -105,6 +104,9 @@ public class GPS_Service extends Service {
                         Address address = addresses.get(0);
                         StringBuffer addressDetails = new StringBuffer();
                         addressDetails.append(address.getAddressLine(0));
+
+                        Log.e("adresse_gps_src",addressDetails.toString());
+
                         i.putExtra("adresse_gps", addressDetails.toString());
                         i.putExtra("latitude_gps", location.getLatitude());
                         i.putExtra("longitude_gps", location.getLongitude());
@@ -153,6 +155,9 @@ public class GPS_Service extends Service {
                         Address address = addresses.get(0);
                         StringBuffer addressDetails = new StringBuffer();
                         addressDetails.append(address.getAddressLine(0));
+
+                        Log.e("adresse_network_src",addressDetails.toString());
+
                         i.putExtra("adresse", addressDetails.toString());
                         i.putExtra("latitude", location.getLatitude());
                         i.putExtra("longitude", location.getLongitude());
@@ -188,6 +193,9 @@ public class GPS_Service extends Service {
         };
 
         locationManager = (LocationManager) getApplicationContext().getSystemService(Context.LOCATION_SERVICE);
+        List<String> providers = locationManager.getProviders(true);
+        Log.e("providers",providers.toString());
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M && checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION) != PackageManager.PERMISSION_GRANTED && checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
             return;
         }
@@ -197,14 +205,16 @@ public class GPS_Service extends Service {
         */
 
         /*
+        boolean gps_enabled;
+        boolean network_enabled;
         gps_enabled = locationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         network_enabled = locationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
 
         if (gps_enabled) {
-            locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0,locationListenerGps);
+        locationManager.requestLocationUpdates(LocationManager.GPS_PROVIDER, 5000, 0,locationListenerGps);
         }
         if (network_enabled) {
-            locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0,locationListenerNetwork);
+        locationManager.requestLocationUpdates(LocationManager.NETWORK_PROVIDER, 5000, 0,locationListenerNetwork);
         }
         */
     }
